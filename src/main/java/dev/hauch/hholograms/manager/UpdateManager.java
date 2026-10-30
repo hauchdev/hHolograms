@@ -32,16 +32,17 @@ public final class UpdateManager {
     }
 
     private void tick() {
-        for (Hologram h : holograms.all()) {
-            int t = ticks.getOrDefault(h.name().toLowerCase(), 0) + 1;
-            ticks.put(h.name().toLowerCase(), t);
-            if (h.paused()) continue;
-            // refresh placeholders + animation every tick interval
-            boolean doRefresh = (t % Math.max(1, config.refreshIntervalTicks() / Math.max(1, config.animationIntervalTicks())) == 0);
-            java.util.List<String> base = new java.util.ArrayList<>(h.lines());
-            if (doRefresh) base = applyPlaceholders(base);
-            java.util.List<String> rendered = animate(h, base, t);
-            holograms.renderer().updateText(h, rendered);
+        for (Hologram h : new java.util.ArrayList<>(holograms.all())) {
+            try {
+                int t = ticks.getOrDefault(h.name().toLowerCase(), 0) + 1;
+                ticks.put(h.name().toLowerCase(), t);
+                if (h.paused()) continue;
+                boolean doRefresh = (t % Math.max(1, config.refreshIntervalTicks() / Math.max(1, config.animationIntervalTicks())) == 0);
+                java.util.List<String> base = new java.util.ArrayList<>(h.lines());
+                if (doRefresh) base = applyPlaceholders(base);
+                java.util.List<String> rendered = animate(h, base, t);
+                holograms.renderer().updateText(h, rendered);
+            } catch (Exception ignored) {}
         }
     }
 
