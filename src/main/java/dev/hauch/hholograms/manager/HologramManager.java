@@ -101,6 +101,8 @@ public final class HologramManager {
         b.setAnimation(a.animation());
         b.setAnimationSpeed(a.animationSpeed());
         b.setPaused(a.paused());
+        b.setScale(a.scale());
+        b.setAlignment(a.alignment());
     }
 
     public void save() { storage.save(new ArrayList<>(holograms.values())); }

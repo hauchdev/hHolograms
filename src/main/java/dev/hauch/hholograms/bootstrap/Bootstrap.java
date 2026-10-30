@@ -30,6 +30,12 @@ public final class Bootstrap {
         HHologramsCommand command = new HHologramsCommand(plugin, config, messages, manager, updateManager);
         context = new PluginContext(plugin, config, messages, storage, manager, updateManager, command);
         updateManager.start();
+        // PlaceholderAPI expansion
+        if (org.bukkit.Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            try {
+                new dev.hauch.hholograms.placeholder.HHologramsExpansion().register();
+            } catch (Exception ignored) {}
+        }
         // bind command
         org.bukkit.command.PluginCommand cmd = ((org.bukkit.plugin.java.JavaPlugin) plugin).getCommand("hholograms");
         if (cmd != null) {

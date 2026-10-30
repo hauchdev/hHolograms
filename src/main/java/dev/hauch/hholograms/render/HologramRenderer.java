@@ -8,6 +8,9 @@ import org.bukkit.Location;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.util.Transformation;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 import java.util.List;
 
 public final class HologramRenderer {
@@ -26,6 +29,8 @@ public final class HologramRenderer {
             td.setSeeThrough(h.seeThrough());
             td.setShadowed(h.shadowed());
             td.setViewRange((float) h.viewRange());
+            try { td.setAlignment(TextDisplay.TextAlignment.valueOf(h.alignment())); } catch (Exception ignored) { td.setAlignment(TextDisplay.TextAlignment.CENTER); }
+            try { td.setTransformation(new Transformation(new Vector3f(0,0,0), new AxisAngle4f(), new Vector3f(h.scale(), h.scale(), h.scale()), new AxisAngle4f())); } catch (Throwable ignored) {}
             try { td.setLineWidth(1000); } catch (Throwable ignored) {}
             applyBackground(td, h.backgroundColor());
             h.entities().add(td.getUniqueId());

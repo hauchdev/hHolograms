@@ -20,6 +20,8 @@ public final class Hologram {
     private String animation; // none, scroll, typewriter, rainbow
     private int animationSpeed;
     private boolean paused;
+    private float scale;
+    private String alignment; // LEFT, CENTER, RIGHT
     private final List<UUID> entities = new ArrayList<>();
 
     public Hologram(String name, Location location) {
@@ -34,6 +36,8 @@ public final class Hologram {
         this.animation = "none";
         this.animationSpeed = 1;
         this.paused = false;
+        this.scale = 1.0f;
+        this.alignment = "CENTER";
     }
 
     public String name() { return name; }
@@ -59,6 +63,10 @@ public final class Hologram {
     public void setAnimationSpeed(int v) { this.animationSpeed = Math.max(1, v); }
     public boolean paused() { return paused; }
     public void setPaused(boolean v) { this.paused = v; }
+    public float scale() { return scale; }
+    public void setScale(float v) { this.scale = v <= 0 ? 1.0f : v; }
+    public String alignment() { return alignment; }
+    public void setAlignment(String v) { this.alignment = v == null ? "CENTER" : v.toUpperCase(); }
 
     public List<UUID> entities() { return entities; }
     public void clearEntities() { entities.clear(); }

@@ -56,6 +56,8 @@ public final class HologramStorage {
             h.setAnimation(s.getString("animation", "none"));
             h.setAnimationSpeed(s.getInt("animation-speed", 1));
             h.setPaused(s.getBoolean("paused", false));
+            h.setScale((float) s.getDouble("scale", 1.0));
+            h.setAlignment(s.getString("alignment", "CENTER"));
             out.add(h);
         }
         return out;
@@ -82,6 +84,8 @@ public final class HologramStorage {
             cfg.set(base + ".animation", h.animation());
             cfg.set(base + ".animation-speed", h.animationSpeed());
             cfg.set(base + ".paused", h.paused());
+            cfg.set(base + ".scale", h.scale());
+            cfg.set(base + ".alignment", h.alignment());
         }
         try { cfg.save(file); } catch (IOException e) {
             plugin.getLogger().warning("Failed to save holograms: " + e.getMessage());
