@@ -18,6 +18,8 @@ Root: `/hholograms` (alias `/hh`)
 - `/hh billboard <name> <center|vertical|horizontal|fixed>`
 - `/hh range <name> <blocks>`
 - `/hh background <name> <transparent|#RRGGBB|#AARRGGBB>`
+- `/hh scale <name> <factor>`
+- `/hh align <name> <left|center|right>`
 - `/hh animation <name> <none|scroll|typewriter|rainbow|pulse> [speed]`
 - `/hh pause <name>` / `/hh resume <name>`
 - `/hh reload`
