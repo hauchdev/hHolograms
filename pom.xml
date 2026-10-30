@@ -7,13 +7,30 @@
 
     <groupId>dev.hauch</groupId>
     <artifactId>hholograms</artifactId>
-    <version>1.0.0</version>
-    <packaging>jar</packaging>
-    <name>hHolograms</name>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+    <name>hHolograms (Parent)</name>
     <description>Premium hologram system for Paper servers.</description>
     <url>https://github.com/hauchdev/hHolograms</url>
 
+    <modules>
+        <module>core</module>
+        <module>v1_18_R2</module>
+        <module>v1_19_R1</module>
+        <module>v1_19_R2</module>
+        <module>v1_19_R3</module>
+        <module>v1_20_R1</module>
+        <module>v1_20_R2</module>
+        <module>v1_20_R3</module>
+        <module>v1_20_R4</module>
+        <module>v1_21_R1</module>
+        <module>v1_21_R2</module>
+        <module>v1_21_R3</module>
+        <module>plugin-dist</module>
+    </modules>
+
     <properties>
+        <revision>1.0.0</revision>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <maven.compiler.release>21</maven.compiler.release>
@@ -21,6 +38,49 @@
         <paper.version>1.21.8-R0.1-SNAPSHOT</paper.version>
         <placeholderapi.version>2.11.6</placeholderapi.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>dev.hauch</groupId>
+                <artifactId>core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <!-- version modules -->
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_18_R2</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_19_R1</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_19_R2</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_19_R3</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_20_R1</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_20_R2</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_20_R3</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_20_R4</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_21_R1</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_21_R2</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>v1_21_R3</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.hauch</groupId><artifactId>plugin-dist</artifactId><version>${project.version}</version></dependency>
+
+            <dependency>
+                <groupId>io.papermc.paper</groupId>
+                <artifactId>paper-api</artifactId>
+                <version>${paper.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>me.clip</groupId>
+                <artifactId>placeholderapi</artifactId>
+                <version>${placeholderapi.version}</version>
+                <scope>provided</scope>
+                <optional>true</optional>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>5.10.2</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <repositories>
         <repository>
@@ -33,45 +93,18 @@
         </repository>
     </repositories>
 
-    <dependencies>
-        <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
-            <version>${paper.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>me.clip</groupId>
-            <artifactId>placeholderapi</artifactId>
-            <version>${placeholderapi.version}</version>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.10.2</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
     <build>
-        <finalName>hHolograms-${project.version}</finalName>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
-                <configuration>
-                    <release>21</release>
-                </configuration>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <release>21</release>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 </project>
