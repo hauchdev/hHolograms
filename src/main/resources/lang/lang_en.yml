@@ -1,0 +1,5 @@
+prefix: "<gold>[hHolograms]</gold> "
+created: "{prefix}<green>Created hologram {name}."
+removed: "{prefix}<green>Removed."
+not-found: "{prefix}<red>Hologram not found."
+no-permission: "{prefix}<red>No permission."

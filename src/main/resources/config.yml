@@ -1,0 +1,17 @@
+# hHolograms configuration
+config-version: 1
+
+# Language file name (without .yml) under lang/
+language: en
+
+# Debug logging
+debug: false
+
+# Central update intervals (ticks)
+refresh-interval-ticks: 20
+animation-interval-ticks: 2
+
+defaults:
+  line-spacing: 0.3
+  view-range: 48
+  billboard: CENTER

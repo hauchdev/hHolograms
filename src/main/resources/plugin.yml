@@ -1,0 +1,54 @@
+name: hHolograms
+version: '${project.version}'
+main: dev.hauch.hholograms.HHolograms
+api-version: '1.20'
+load: STARTUP
+authors: [ Hauchdev ]
+website: https://github.com/hauchdev/hHolograms
+softdepend:
+  - PlaceholderAPI
+permissions:
+  hholograms.*:
+    description: All hHolograms permissions
+    default: op
+    children:
+      - hholograms.create
+      - hholograms.remove
+      - hholograms.list
+      - hholograms.info
+      - hholograms.move
+      - hholograms.teleport
+      - hholograms.duplicate
+      - hholograms.edit
+      - hholograms.reload
+      - hholograms.status
+      - hholograms.trustedformatting
+  hholograms.create:
+    default: op
+  hholograms.remove:
+    default: op
+  hholograms.list:
+    default: true
+  hholograms.info:
+    default: true
+  hholograms.move:
+    default: op
+  hholograms.teleport:
+    default: true
+  hholograms.duplicate:
+    default: op
+  hholograms.edit:
+    default: op
+  hholograms.reload:
+    default: op
+  hholograms.status:
+    default: op
+  hholograms.trustedformatting:
+    default: op
+commands:
+  hholograms:
+    description: Main hHolograms command.
+    usage: /hholograms <subcommand>
+    aliases: [hh]
+    permission: hholograms.list
+    permission-message: You do not have <permission> to use this command!

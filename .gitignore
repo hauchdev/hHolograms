@@ -1,0 +1,14 @@
+target/
+.idea/
+*.iml
+*.log
+*.tmp
+# planning / internal docs
+AGENTS.md
+ROADMAP*.md
+*PLAN*.md
+*ROADMAP*
+implementation-plan*
+# OS
+.DS_Store
+Thumbs.db
