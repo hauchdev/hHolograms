@@ -44,6 +44,30 @@ public final class UpdateManager {
                 if (doRefresh) base = applyPlaceholders(base);
                 java.util.List<String> rendered = animateLines(lines, base, t);
                 holograms.renderer().updateText(h, rendered);
+                // visibility condition
+                boolean visible = true;
+                String cond = h.visibilityCondition();
+                if (cond != null && !cond.isBlank()) {
+                    try {
+                        String res = cond;
+                        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+                            Class<?> cls = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
+                            java.lang.reflect.Method m = cls.getMethod("setPlaceholders", org.bukkit.OfflinePlayer.class, String.class);
+                            res = (String) m.invoke(null, null, cond);
+                        }
+                        String r = res.trim().toLowerCase();
+                        visible = !(r.isEmpty() || r.equals("false") || r.equals("no") || r.equals("0"));
+                    } catch (Exception ignored) { visible = true; }
+                }
+                for (java.util.UUID id : h.entities()) {
+                    org.bukkit.entity.Entity e = Bukkit.getEntity(id);
+                    if (e != null) {
+                        try {
+                            java.lang.reflect.Method m = e.getClass().getMethod("setVisible", boolean.class);
+                            m.invoke(e, visible);
+                        } catch (Throwable ignored) {}
+                    }
+                }
             } catch (Exception ignored) {}
         }
     }

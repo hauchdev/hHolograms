@@ -32,6 +32,7 @@ public final class Bootstrap {
         HHologramsCommand command = new HHologramsCommand(plugin, config, messages, manager, updateManager);
         context = new PluginContext(plugin, adapter, config, messages, storage, manager, updateManager, command);
         updateManager.start();
+        Bukkit.getPluginManager().registerEvents(new dev.hauchdev.hholograms.listener.HologramInteractionListener(), plugin);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             try { new HHologramsExpansion().register(); } catch (Exception ignored) {}
         }
