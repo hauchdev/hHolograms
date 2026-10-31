@@ -31,7 +31,13 @@ public final class HologramRenderer {
             } catch (Exception ignored) {}
             id.setBillboard(parseBillboard(h.billboard()));
             id.setViewRange((float) h.viewRange());
-            try { id.setTransformation(new Transformation(new Vector3f(0,0,0), new AxisAngle4f(), new Vector3f(h.scale(), h.scale(), h.scale()), new AxisAngle4f())); } catch (Throwable ignored) {}
+            applyBrightness(id, h.brightness());
+            Transformation itr = new Transformation(
+                new Vector3f((float)h.translationX(), (float)h.translationY(), (float)h.translationZ()),
+                new AxisAngle4f((float)Math.toRadians(h.rotationYaw()), 0,1,0),
+                new Vector3f(h.scale(),h.scale(),h.scale()),
+                new AxisAngle4f((float)Math.toRadians(h.rotationPitch()), 1,0,0));
+            try { id.setTransformation(itr); } catch (Throwable ignored) {}
             h.entities().add(id.getUniqueId());
             return;
         }
@@ -41,7 +47,13 @@ public final class HologramRenderer {
             try { bd.setBlock(org.bukkit.Bukkit.createBlockData(h.content().isEmpty() ? "STONE" : h.content())); } catch (Exception ignored) {}
             bd.setBillboard(parseBillboard(h.billboard()));
             bd.setViewRange((float) h.viewRange());
-            try { bd.setTransformation(new Transformation(new Vector3f(0,0,0), new AxisAngle4f(), new Vector3f(h.scale(), h.scale(), h.scale()), new AxisAngle4f())); } catch (Throwable ignored) {}
+            applyBrightness(bd, h.brightness());
+            Transformation btr = new Transformation(
+                new Vector3f((float)h.translationX(), (float)h.translationY(), (float)h.translationZ()),
+                new AxisAngle4f((float)Math.toRadians(h.rotationYaw()), 0,1,0),
+                new Vector3f(h.scale(),h.scale(),h.scale()),
+                new AxisAngle4f((float)Math.toRadians(h.rotationPitch()), 1,0,0));
+            try { bd.setTransformation(btr); } catch (Throwable ignored) {}
             h.entities().add(bd.getUniqueId());
             return;
         }
@@ -58,7 +70,14 @@ public final class HologramRenderer {
             td.setViewRange((float) h.viewRange());
             try { td.setAlignment(TextDisplay.TextAlignment.valueOf(h.alignment())); } catch (Exception ignored) { td.setAlignment(TextDisplay.TextAlignment.CENTER); }
             float ls = hl.scale();
-            try { td.setTransformation(new Transformation(new Vector3f(0,0,0), new AxisAngle4f(), new Vector3f(h.scale()*ls, h.scale()*ls, h.scale()*ls), new AxisAngle4f())); } catch (Throwable ignored) {}
+            applyBrightness(td, h.brightness());
+            float s = h.scale()*ls;
+            Transformation tr = new Transformation(
+                new Vector3f((float)h.translationX(), (float)h.translationY(), (float)h.translationZ()),
+                new AxisAngle4f((float)Math.toRadians(h.rotationYaw()), 0,1,0),
+                new Vector3f(s,s,s),
+                new AxisAngle4f((float)Math.toRadians(h.rotationPitch()), 1,0,0));
+            try { td.setTransformation(tr); } catch (Throwable ignored) {}
             try { td.setLineWidth(1000); } catch (Throwable ignored) {}
             applyBackground(td, h.backgroundColor());
             h.entities().add(td.getUniqueId());
@@ -83,6 +102,12 @@ public final class HologramRenderer {
             if (e != null) e.remove();
         }
         h.clearEntities();
+    }
+
+    private void applyBrightness(org.bukkit.entity.Display d, int b) {
+        if (b < 0) return;
+        int v = Math.max(0, Math.min(15, b));
+        try { d.setBrightness(new org.bukkit.entity.Display.Brightness(v, v)); } catch (Throwable ignored) {}
     }
 
     private Display.Billboard parseBillboard(String s) {

@@ -80,6 +80,14 @@ public final class HologramStorage {
             h.setAlignment(s.getString("alignment", "CENTER"));
             h.setType(s.getString("type", "TEXT"));
             h.setContent(s.getString("content", ""));
+            h.setBrightness(s.getInt("brightness", -1));
+            h.setTranslationX(s.getDouble("translation-x", 0));
+            h.setTranslationY(s.getDouble("translation-y", 0));
+            h.setTranslationZ(s.getDouble("translation-z", 0));
+            h.setRotationYaw((float) s.getDouble("rotation-yaw", 0));
+            h.setRotationPitch((float) s.getDouble("rotation-pitch", 0));
+            h.setVisibilityCondition(s.getString("visibility-condition", ""));
+            h.setOnClickCommand(s.getString("on-click", ""));
             out.add(h);
         }
         return out;
@@ -120,6 +128,14 @@ public final class HologramStorage {
             cfg.set(base + ".alignment", h.alignment());
             cfg.set(base + ".type", h.type());
             cfg.set(base + ".content", h.content());
+            cfg.set(base + ".brightness", h.brightness());
+            cfg.set(base + ".translation-x", h.translationX());
+            cfg.set(base + ".translation-y", h.translationY());
+            cfg.set(base + ".translation-z", h.translationZ());
+            cfg.set(base + ".rotation-yaw", h.rotationYaw());
+            cfg.set(base + ".rotation-pitch", h.rotationPitch());
+            cfg.set(base + ".visibility-condition", h.visibilityCondition());
+            cfg.set(base + ".on-click", h.onClickCommand());
         }
         try { cfg.save(file); } catch (IOException e) {
             plugin.getLogger().warning("Failed to save holograms: " + e.getMessage());

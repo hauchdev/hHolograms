@@ -105,6 +105,14 @@ public final class HologramManager {
         b.setAlignment(a.alignment());
         b.setType(a.type());
         b.setContent(a.content());
+        b.setBrightness(a.brightness());
+        b.setTranslationX(a.translationX());
+        b.setTranslationY(a.translationY());
+        b.setTranslationZ(a.translationZ());
+        b.setRotationYaw(a.rotationYaw());
+        b.setRotationPitch(a.rotationPitch());
+        b.setVisibilityCondition(a.visibilityCondition());
+        b.setOnClickCommand(a.onClickCommand());
     }
 
     public void save() { storage.save(new ArrayList<>(holograms.values())); }
