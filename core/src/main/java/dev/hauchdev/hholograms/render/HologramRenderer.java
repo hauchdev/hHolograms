@@ -47,7 +47,8 @@ public final class HologramRenderer {
         }
         int n = h.lines().size();
         for (int i = 0; i < n; i++) {
-            String raw = h.lines().get(i);
+            dev.hauchdev.hholograms.model.HologramLine hl = h.lines().get(i);
+            String raw = hl.text();
             Location loc = base.clone().add(0, -i * h.lineSpacing(), 0);
             TextDisplay td = base.getWorld().spawn(loc, TextDisplay.class);
             td.text(MM.deserialize(raw));
@@ -56,7 +57,8 @@ public final class HologramRenderer {
             td.setShadowed(h.shadowed());
             td.setViewRange((float) h.viewRange());
             try { td.setAlignment(TextDisplay.TextAlignment.valueOf(h.alignment())); } catch (Exception ignored) { td.setAlignment(TextDisplay.TextAlignment.CENTER); }
-            try { td.setTransformation(new Transformation(new Vector3f(0,0,0), new AxisAngle4f(), new Vector3f(h.scale(), h.scale(), h.scale()), new AxisAngle4f())); } catch (Throwable ignored) {}
+            float ls = hl.scale();
+            try { td.setTransformation(new Transformation(new Vector3f(0,0,0), new AxisAngle4f(), new Vector3f(h.scale()*ls, h.scale()*ls, h.scale()*ls), new AxisAngle4f())); } catch (Throwable ignored) {}
             try { td.setLineWidth(1000); } catch (Throwable ignored) {}
             applyBackground(td, h.backgroundColor());
             h.entities().add(td.getUniqueId());
