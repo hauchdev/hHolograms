@@ -46,7 +46,27 @@ public final class HologramStorage {
                     s.getDouble("x"), s.getDouble("y"), s.getDouble("z"),
                     (float) s.getDouble("yaw", 0), (float) s.getDouble("pitch", 0));
             Hologram h = new Hologram(name, loc);
-            h.setLines(s.getStringList("lines"));
+            Object rawLines = s.get("lines");
+            if (rawLines instanceof java.util.List<?> list) {
+                for (Object o : list) {
+                    if (o instanceof String str) {
+                        h.lines().add(new dev.hauchdev.hholograms.model.HologramLine(str));
+                    } else if (o instanceof java.util.Map<?, ?> m) {
+                        Object to = m.get("text");
+                        String text = (to == null) ? "" : String.valueOf(to);
+                        dev.hauchdev.hholograms.model.HologramLine hl = new dev.hauchdev.hholograms.model.HologramLine(text);
+                        if (m.containsKey("scale")) hl.setScale(((Number) (Object) m.get("scale")).floatValue());
+                        if (m.containsKey("animation")) hl.setAnimation(String.valueOf(m.get("animation")));
+                        if (m.containsKey("animation-speed")) hl.setAnimationSpeed(((Number) (Object) m.get("animation-speed")).intValue());
+                        if (m.containsKey("paused")) hl.setPaused(Boolean.parseBoolean(String.valueOf((Object) m.get("paused"))));
+                        h.lines().add(hl);
+                    }
+                }
+            } else {
+                for (String str : s.getStringList("lines")) {
+                    h.lines().add(new dev.hauchdev.hholograms.model.HologramLine(str));
+                }
+            }
             h.setLineSpacing(s.getDouble("line-spacing", 0.3));
             h.setViewRange(s.getInt("view-range", 48));
             h.setBillboard(s.getString("billboard", "CENTER"));
@@ -76,7 +96,17 @@ public final class HologramStorage {
             cfg.set(base + ".z", l.getZ());
             cfg.set(base + ".yaw", l.getYaw());
             cfg.set(base + ".pitch", l.getPitch());
-            cfg.set(base + ".lines", h.lines());
+            java.util.List<java.util.Map<String, Object>> lineMaps = new java.util.ArrayList<>();
+            for (dev.hauchdev.hholograms.model.HologramLine hl : h.lines()) {
+                java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("text", hl.text());
+                m.put("scale", hl.scale());
+                m.put("animation", hl.animation());
+                m.put("animation-speed", hl.animationSpeed());
+                m.put("paused", hl.paused());
+                lineMaps.add(m);
+            }
+            cfg.set(base + ".lines", lineMaps);
             cfg.set(base + ".line-spacing", h.lineSpacing());
             cfg.set(base + ".view-range", h.viewRange());
             cfg.set(base + ".billboard", h.billboard());
