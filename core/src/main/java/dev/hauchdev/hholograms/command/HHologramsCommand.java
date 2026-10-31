@@ -414,9 +414,13 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
             h.setRotationYaw(Float.parseFloat(args[2]));
             h.setRotationPitch(Float.parseFloat(args[3]));
         } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        if (!h.billboard().equalsIgnoreCase("FIXED")) {
+            h.setBillboard("FIXED");
+            sender.sendMessage(ChatColor.GRAY + "Billboard set to FIXED to apply rotation.");
+        }
         holograms.renderer().render(h);
         holograms.save();
-        sender.sendMessage(ChatColor.GREEN + "Rotation set.");
+        sender.sendMessage(ChatColor.GREEN + "Rotation set to yaw=" + h.rotationYaw() + " pitch=" + h.rotationPitch() + ".");
     }
 
     private void cmdCondition(CommandSender sender, String[] args) {
