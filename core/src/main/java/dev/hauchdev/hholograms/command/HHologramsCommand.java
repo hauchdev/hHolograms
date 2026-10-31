@@ -63,6 +63,11 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
                 case "content" -> cmdContent(sender, args);
                 case "scale" -> cmdScale(sender, args);
                 case "align", "alignment" -> cmdAlign(sender, args);
+                case "brightness" -> cmdBrightness(sender, args);
+                case "translate" -> cmdTranslate(sender, args);
+                case "rotate" -> cmdRotate(sender, args);
+                case "condition" -> cmdCondition(sender, args);
+                case "click", "onclick" -> cmdClick(sender, args);
                 case "animation", "anim" -> cmdAnimation(sender, args);
                 case "pause" -> cmdPause(sender, args, true);
                 case "resume", "unpause" -> cmdPause(sender, args, false);
@@ -137,6 +142,11 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
             "/hh content <name> <material/block>",
             "/hh scale <name> <factor>",
             "/hh align <name> <left|center|right>",
+            "/hh brightness <name> <0-15|-1>",
+            "/hh translate <name> <x> <y> <z>",
+            "/hh rotate <name> <yaw> <pitch>",
+            "/hh condition <name> <expr|clear>",
+            "/hh click <name> <command|clear>",
             "/hh animation <name> <none|scroll|typewriter|rainbow|pulse> [speed]",
             "/hh pause <name> / /hh resume <name>",
             "/hh reload",
@@ -369,6 +379,68 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.GREEN + "Content set.");
     }
 
+    private void cmdBrightness(CommandSender sender, String[] args) {
+        if (!perm(sender, "edit")) { noPerm(sender); return; }
+        if (args.length < 3) { usage(sender, "brightness <name> <0-15|-1>"); return; }
+        Hologram h = holograms.get(args[1]);
+        if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
+        try { h.setBrightness(Integer.parseInt(args[2])); } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        holograms.renderer().render(h);
+        holograms.save();
+        sender.sendMessage(ChatColor.GREEN + "Brightness set.");
+    }
+
+    private void cmdTranslate(CommandSender sender, String[] args) {
+        if (!perm(sender, "edit")) { noPerm(sender); return; }
+        if (args.length < 5) { usage(sender, "translate <name> <x> <y> <z>"); return; }
+        Hologram h = holograms.get(args[1]);
+        if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
+        try {
+            h.setTranslationX(Double.parseDouble(args[2]));
+            h.setTranslationY(Double.parseDouble(args[3]));
+            h.setTranslationZ(Double.parseDouble(args[4]));
+        } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        holograms.renderer().render(h);
+        holograms.save();
+        sender.sendMessage(ChatColor.GREEN + "Translation set.");
+    }
+
+    private void cmdRotate(CommandSender sender, String[] args) {
+        if (!perm(sender, "edit")) { noPerm(sender); return; }
+        if (args.length < 4) { usage(sender, "rotate <name> <yaw> <pitch>"); return; }
+        Hologram h = holograms.get(args[1]);
+        if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
+        try {
+            h.setRotationYaw(Float.parseFloat(args[2]));
+            h.setRotationPitch(Float.parseFloat(args[3]));
+        } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        holograms.renderer().render(h);
+        holograms.save();
+        sender.sendMessage(ChatColor.GREEN + "Rotation set.");
+    }
+
+    private void cmdCondition(CommandSender sender, String[] args) {
+        if (!perm(sender, "edit")) { noPerm(sender); return; }
+        if (args.length < 2) { usage(sender, "condition <name> <expr...|clear>"); return; }
+        Hologram h = holograms.get(args[1]);
+        if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
+        if (args.length < 3 || args[2].equalsIgnoreCase("clear")) h.setVisibilityCondition("");
+        else h.setVisibilityCondition(join(args, 2));
+        holograms.save();
+        sender.sendMessage(ChatColor.GREEN + "Condition set.");
+    }
+
+    private void cmdClick(CommandSender sender, String[] args) {
+        if (!perm(sender, "edit")) { noPerm(sender); return; }
+        if (args.length < 2) { usage(sender, "click <name> <command...|clear>"); return; }
+        Hologram h = holograms.get(args[1]);
+        if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
+        if (args.length < 3 || args[2].equalsIgnoreCase("clear")) h.setOnClickCommand("");
+        else h.setOnClickCommand(join(args, 2));
+        holograms.save();
+        sender.sendMessage(ChatColor.GREEN + "Click command set.");
+    }
+
     private void cmdScale(CommandSender sender, String[] args) {
         if (!perm(sender, "edit")) { noPerm(sender); return; }
         if (args.length < 3) { usage(sender, "scale <name> <factor>"); return; }
@@ -436,34 +508,58 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
+        List<String> subs = Arrays.asList("help","create","remove","list","info","move","tp","duplicate","edit","spacing","billboard","range","background","type","content","scale","align","animation","brightness","translate","rotate","condition","click","pause","resume","reload","status");
         if (args.length == 1) {
-            List<String> subs = Arrays.asList("help","create","remove","list","info","move","tp","duplicate","edit","spacing","billboard","range","background","animation","pause","resume","reload","status");
             for (String s : subs) if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
             return out;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
-        if (args.length == 2 && Arrays.asList("remove","info","move","tp","duplicate","edit","spacing","billboard","range","background","type","content","scale","align","animation","pause","resume").contains(sub)) {
+        if (args.length == 2 && (sub.equals("remove")||sub.equals("info")||sub.equals("move")||sub.equals("tp")||sub.equals("duplicate")||sub.equals("edit")||sub.equals("spacing")||sub.equals("billboard")||sub.equals("range")||sub.equals("background")||sub.equals("type")||sub.equals("content")||sub.equals("scale")||sub.equals("align")||sub.equals("animation")||sub.equals("brightness")||sub.equals("translate")||sub.equals("rotate")||sub.equals("condition")||sub.equals("click")||sub.equals("pause")||sub.equals("resume"))) {
             for (Hologram h : holograms.all()) if (h.name().toLowerCase().startsWith(args[1].toLowerCase())) out.add(h.name());
             return out;
         }
-        if (sub.equals("edit") && args.length == 3) {
-            for (String s : Arrays.asList("add","set","insert","remove","clear","swap")) if (s.startsWith(args[2].toLowerCase())) out.add(s);
-            return out;
+        Hologram h = args.length > 1 ? holograms.get(args[1]) : null;
+        if (sub.equals("edit")) {
+            if (args.length == 3) {
+                for (String s : Arrays.asList("add","set","insert","remove","clear","swap","scale","animation","pause","resume")) if (s.startsWith(args[2].toLowerCase())) out.add(s);
+                return out;
+            }
+            if (h != null && args.length == 4) {
+                for (int i = 0; i < h.lines().size(); i++) if (String.valueOf(i).startsWith(args[3])) out.add(String.valueOf(i));
+                return out;
+            }
+            if (args.length >= 4 && args[2].equalsIgnoreCase("animation")) {
+                String last = args[args.length-1];
+                for (String s : Arrays.asList("none","scroll","typewriter","rainbow","pulse","wave","bounce","glitch","fade","slide","shake")) if (s.startsWith(last.toLowerCase())) out.add(s);
+                return out;
+            }
         }
-        if (sub.equals("type") && args.length == 3) {
-            for (String s : Arrays.asList("TEXT","ITEM","BLOCK")) if (s.toLowerCase().startsWith(args[2].toLowerCase())) out.add(s);
+        if (sub.equals("billboard") && args.length == 3) {
+            for (String s : Arrays.asList("CENTER","VERTICAL","HORIZONTAL","FIXED")) if (s.toLowerCase().startsWith(args[2].toLowerCase())) out.add(s);
             return out;
         }
         if (sub.equals("align") && args.length == 3) {
             for (String s : Arrays.asList("LEFT","CENTER","RIGHT")) if (s.toLowerCase().startsWith(args[2].toLowerCase())) out.add(s);
             return out;
         }
-        if (sub.equals("billboard") && args.length == 3) {
-            for (String s : Arrays.asList("CENTER","VERTICAL","HORIZONTAL","FIXED")) if (s.toLowerCase().startsWith(args[2].toLowerCase())) out.add(s);
+        if (sub.equals("type") && args.length == 3) {
+            for (String s : Arrays.asList("TEXT","ITEM","BLOCK")) if (s.toLowerCase().startsWith(args[2].toLowerCase())) out.add(s);
             return out;
         }
-        if (sub.equals("animation") && args.length == 3) {
-            for (String s : Arrays.asList("none","scroll","typewriter","rainbow","pulse")) if (s.startsWith(args[2].toLowerCase())) out.add(s);
+        if (sub.equals("background") && args.length == 3) {
+            for (String s : Arrays.asList("transparent","remove","none")) if (s.startsWith(args[2].toLowerCase())) out.add(s);
+            return out;
+        }
+        if ((sub.equals("animation")||sub.equals("anim")) && args.length == 3) {
+            for (String s : Arrays.asList("none","scroll","typewriter","rainbow","pulse","wave","bounce","glitch","fade","slide","shake")) if (s.startsWith(args[2].toLowerCase())) out.add(s);
+            return out;
+        }
+        if (sub.equals("create") && args.length == 3) {
+            for (org.bukkit.World w : org.bukkit.Bukkit.getWorlds()) if (w.getName().toLowerCase().startsWith(args[2].toLowerCase())) out.add(w.getName());
+            return out;
+        }
+        if (sub.equals("brightness") && args.length == 3) {
+            for (String s : Arrays.asList("-1","0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15")) if (s.startsWith(args[2])) out.add(s);
             return out;
         }
         return Collections.emptyList();
