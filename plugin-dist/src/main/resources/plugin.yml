@@ -1,6 +1,6 @@
 name: hHolograms
 version: '${project.version}'
-main: dev.hauch.hholograms.HHolograms
+main: dev.hauchdev.hholograms.HHolograms
 api-version: '1.20'
 load: STARTUP
 authors: [ Hauchdev ]

@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>dev.hauch</groupId>
+        <groupId>dev.hauchdev</groupId>
         <artifactId>hholograms</artifactId>
         <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
@@ -14,18 +14,18 @@
     <packaging>jar</packaging>
 
     <dependencies>
-        <dependency><groupId>dev.hauch</groupId><artifactId>core</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_18_R2</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_19_R1</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_19_R2</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_19_R3</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_20_R1</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_20_R2</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_20_R3</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_20_R4</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_21_R1</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_21_R2</artifactId></dependency>
-        <dependency><groupId>dev.hauch</groupId><artifactId>v1_21_R3</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>core</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_18_R2</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_19_R1</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_19_R2</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_19_R3</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_20_R1</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_20_R2</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_20_R3</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_20_R4</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_21_R1</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_21_R2</artifactId></dependency>
+        <dependency><groupId>dev.hauchdev</groupId><artifactId>v1_21_R3</artifactId></dependency>
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
@@ -59,23 +59,23 @@
                             <shadedArtifactAttached>false</shadedArtifactAttached>
                             <artifactSet>
                                 <includes>
-                                    <include>dev.hauch:core</include>
-                                    <include>dev.hauch:v1_18_R2</include>
-                                    <include>dev.hauch:v1_19_R1</include>
-                                    <include>dev.hauch:v1_19_R2</include>
-                                    <include>dev.hauch:v1_19_R3</include>
-                                    <include>dev.hauch:v1_20_R1</include>
-                                    <include>dev.hauch:v1_20_R2</include>
-                                    <include>dev.hauch:v1_20_R3</include>
-                                    <include>dev.hauch:v1_20_R4</include>
-                                    <include>dev.hauch:v1_21_R1</include>
-                                    <include>dev.hauch:v1_21_R2</include>
-                                    <include>dev.hauch:v1_21_R3</include>
+                                    <include>dev.hauchdev:core</include>
+                                    <include>dev.hauchdev:v1_18_R2</include>
+                                    <include>dev.hauchdev:v1_19_R1</include>
+                                    <include>dev.hauchdev:v1_19_R2</include>
+                                    <include>dev.hauchdev:v1_19_R3</include>
+                                    <include>dev.hauchdev:v1_20_R1</include>
+                                    <include>dev.hauchdev:v1_20_R2</include>
+                                    <include>dev.hauchdev:v1_20_R3</include>
+                                    <include>dev.hauchdev:v1_20_R4</include>
+                                    <include>dev.hauchdev:v1_21_R1</include>
+                                    <include>dev.hauchdev:v1_21_R2</include>
+                                    <include>dev.hauchdev:v1_21_R3</include>
                                 </includes>
                             </artifactSet>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>dev.hauch.hholograms.HHolograms</mainClass>
+                                    <mainClass>dev.hauchdev.hholograms.HHolograms</mainClass>
                                 </transformer>
                             </transformers>
                             <filters>
