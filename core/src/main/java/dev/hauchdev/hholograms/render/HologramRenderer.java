@@ -117,9 +117,9 @@ public final class HologramRenderer {
     }
 
     private void applyBackground(TextDisplay td, String bg) {
-        if (bg == null || bg.equalsIgnoreCase("transparent") || bg.equalsIgnoreCase("none")) {
+        if (bg == null || bg.equalsIgnoreCase("transparent") || bg.equalsIgnoreCase("none") || bg.equalsIgnoreCase("remove")) {
             td.setDefaultBackground(false);
-            try { td.setBackgroundColor(null); } catch (Throwable ignored) {}
+            try { td.setBackgroundColor(org.bukkit.Color.fromARGB(0, 0, 0, 0)); } catch (Throwable ignored) {}
             return;
         }
         Color c = parseColor(bg);
