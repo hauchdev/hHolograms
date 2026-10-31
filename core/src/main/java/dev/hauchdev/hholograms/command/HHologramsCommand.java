@@ -190,7 +190,8 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.GRAY + "Type: " + h.type() + " | Content: " + h.content());
         sender.sendMessage(ChatColor.GRAY + "Animation: " + h.animation() + " (speed " + h.animationSpeed() + ", paused=" + h.paused() + ")");
         for (int i = 0; i < h.lines().size(); i++) {
-            sender.sendMessage(ChatColor.YELLOW + "  " + i + ": " + h.lines().get(i));
+            dev.hauchdev.hholograms.model.HologramLine hl = h.lines().get(i);
+            sender.sendMessage(ChatColor.YELLOW + "  " + i + ": " + hl.text() + ChatColor.GRAY + " (scale=" + hl.scale() + ", anim=" + hl.animation() + ")");
         }
     }
 
@@ -237,19 +238,46 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         switch (op) {
             case "add" -> {
                 if (args.length < 4) { usage(sender, "edit <name> add <text>"); return; }
-                h.lines().add(TextUtil.sanitize(join(args, 3), trusted));
+                h.lines().add(new dev.hauchdev.hholograms.model.HologramLine(TextUtil.sanitize(join(args, 3), trusted)));
             }
             case "set" -> {
                 if (args.length < 5) { usage(sender, "edit <name> set <index> <text>"); return; }
                 int idx = parseInt(args[3]);
                 if (idx < 0 || idx >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
-                h.lines().set(idx, TextUtil.sanitize(join(args, 4), trusted));
+                h.lines().get(idx).setText(TextUtil.sanitize(join(args, 4), trusted));
             }
             case "insert" -> {
                 if (args.length < 5) { usage(sender, "edit <name> insert <index> <text>"); return; }
                 int idx = parseInt(args[3]);
                 if (idx < 0 || idx > h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
-                h.lines().add(idx, TextUtil.sanitize(join(args, 4), trusted));
+                h.lines().add(idx, new dev.hauchdev.hholograms.model.HologramLine(TextUtil.sanitize(join(args, 4), trusted)));
+            }
+            case "scale" -> {
+                if (args.length < 5) { usage(sender, "edit <name> scale <index> <value>"); return; }
+                int idx = parseInt(args[3]);
+                if (idx < 0 || idx >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
+                try { h.lines().get(idx).setScale(Float.parseFloat(args[4])); } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+            }
+            case "animation" -> {
+                if (args.length < 5) { usage(sender, "edit <name> animation <index> <anim> [speed]"); return; }
+                int idx = parseInt(args[3]);
+                if (idx < 0 || idx >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
+                h.lines().get(idx).setAnimation(args[4]);
+                if (args.length >= 6) {
+                    try { h.lines().get(idx).setAnimationSpeed(Integer.parseInt(args[5])); } catch (NumberFormatException ignored) {}
+                }
+            }
+            case "pause" -> {
+                if (args.length < 4) { usage(sender, "edit <name> pause <index>"); return; }
+                int idx = parseInt(args[3]);
+                if (idx < 0 || idx >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
+                h.lines().get(idx).setPaused(true);
+            }
+            case "resume" -> {
+                if (args.length < 4) { usage(sender, "edit <name> resume <index>"); return; }
+                int idx = parseInt(args[3]);
+                if (idx < 0 || idx >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
+                h.lines().get(idx).setPaused(false);
             }
             case "remove" -> {
                 if (args.length < 4) { usage(sender, "edit <name> remove <index>"); return; }
@@ -262,7 +290,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
                 if (args.length < 5) { usage(sender, "edit <name> swap <i> <j>"); return; }
                 int a = parseInt(args[3]); int b = parseInt(args[4]);
                 if (a < 0 || b < 0 || a >= h.lines().size() || b >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
-                String tmp = h.lines().get(a);
+                dev.hauchdev.hholograms.model.HologramLine tmp = h.lines().get(a);
                 h.lines().set(a, h.lines().get(b));
                 h.lines().set(b, tmp);
             }
@@ -311,7 +339,9 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "background <name> <transparent|#RRGGBB|#AARRGGBB>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        h.setBackgroundColor(args[2]);
+        String bg = args[2];
+        if (bg.equalsIgnoreCase("remove") || bg.equalsIgnoreCase("none")) bg = "transparent";
+        h.setBackgroundColor(bg);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Background set.");
