@@ -10,7 +10,7 @@ import java.util.UUID;
 public final class Hologram {
     private final String name;
     private Location location;
-    private final List<String> lines = new ArrayList<>();
+    private final List<HologramLine> lines = new ArrayList<>();
     private double lineSpacing;
     private int viewRange;
     private String billboard; // CENTER, VERTICAL, HORIZONTAL, FIXED
@@ -47,8 +47,8 @@ public final class Hologram {
     public String name() { return name; }
     public Location location() { return location.clone(); }
     public void setLocation(Location l) { this.location = l.clone(); }
-    public List<String> lines() { return lines; }
-    public void setLines(List<String> ls) { lines.clear(); lines.addAll(ls); }
+    public List<HologramLine> lines() { return lines; }
+    public void setLines(List<HologramLine> ls) { lines.clear(); lines.addAll(ls); }
     public double lineSpacing() { return lineSpacing; }
     public void setLineSpacing(double v) { this.lineSpacing = v; }
     public int viewRange() { return viewRange; }
