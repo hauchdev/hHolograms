@@ -64,6 +64,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
                 case "scale" -> cmdScale(sender, args);
                 case "align", "alignment" -> cmdAlign(sender, args);
                 case "brightness" -> cmdBrightness(sender, args);
+                case "linewidth", "width" -> cmdLineWidth(sender, args);
                 case "translate" -> cmdTranslate(sender, args);
                 case "rotate" -> cmdRotate(sender, args);
                 case "condition" -> cmdCondition(sender, args);
@@ -143,11 +144,12 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
             "/hh scale <name> <factor>",
             "/hh align <name> <left|center|right>",
             "/hh brightness <name> <0-15|-1>",
+            "/hh linewidth <name> <1-4096>",
             "/hh translate <name> <x> <y> <z>",
             "/hh rotate <name> <yaw> <pitch>",
             "/hh condition <name> <expr|clear>",
             "/hh click <name> <command|clear>",
-            "/hh animation <name> <none|scroll|typewriter|rainbow|pulse> [speed]",
+            "/hh animation <name> <none|scroll|typewriter|rainbow|pulse|wave|bounce|glitch|fade|slide|shake> [speed]",
             "/hh pause <name> / /hh resume <name>",
             "/hh reload",
             "/hh status"
@@ -194,7 +196,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
         sender.sendMessage(ChatColor.GOLD + "Hologram: " + h.name());
         sender.sendMessage(ChatColor.GRAY + "Location: " + fmtLoc(h.location()));
-        sender.sendMessage(ChatColor.GRAY + "Lines: " + h.lines().size() + " | Spacing: " + h.lineSpacing());
+        sender.sendMessage(ChatColor.GRAY + "Lines: " + h.lines().size() + " | Spacing: " + h.lineSpacing() + " | Width: " + h.lineWidth());
         sender.sendMessage(ChatColor.GRAY + "Billboard: " + h.billboard() + " | Range: " + h.viewRange());
         sender.sendMessage(ChatColor.GRAY + "Background: " + h.backgroundColor() + " | Shadow: " + h.shadowed() + " | SeeThrough: " + h.seeThrough());
         sender.sendMessage(ChatColor.GRAY + "Type: " + h.type() + " | Content: " + h.content());
@@ -266,16 +268,26 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
                 if (args.length < 5) { usage(sender, "edit <name> scale <index> <value>"); return; }
                 int idx = parseInt(args[3]);
                 if (idx < 0 || idx >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
-                try { h.lines().get(idx).setScale(Float.parseFloat(args[4])); } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+                Float scale = finiteFloat(args[4]);
+                if (scale == null || scale <= 0 || scale > 16) { sender.sendMessage(ChatColor.RED + "Line scale must be a finite number greater than 0 and at most 16."); return; }
+                h.lines().get(idx).setScale(scale);
             }
             case "animation" -> {
                 if (args.length < 5) { usage(sender, "edit <name> animation <index> <anim> [speed]"); return; }
                 int idx = parseInt(args[3]);
                 if (idx < 0 || idx >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
-                h.lines().get(idx).setAnimation(args[4]);
-                if (args.length >= 6) {
-                    try { h.lines().get(idx).setAnimationSpeed(Integer.parseInt(args[5])); } catch (NumberFormatException ignored) {}
+                String animation = args[4].toLowerCase(Locale.ROOT);
+                if (!Arrays.asList("none", "scroll", "typewriter", "rainbow", "pulse", "wave", "bounce", "glitch", "fade", "slide", "shake").contains(animation)) {
+                    sender.sendMessage(ChatColor.RED + "Unknown animation."); return;
                 }
+                Integer animationSpeed = null;
+                if (args.length >= 6) {
+                    int speed = parseInt(args[5]);
+                    if (speed < 1 || speed > 100) { sender.sendMessage(ChatColor.RED + "Animation speed must be an integer from 1 to 100."); return; }
+                    animationSpeed = speed;
+                }
+                h.lines().get(idx).setAnimation(animation);
+                if (animationSpeed != null) h.lines().get(idx).setAnimationSpeed(animationSpeed);
             }
             case "pause" -> {
                 if (args.length < 4) { usage(sender, "edit <name> pause <index>"); return; }
@@ -316,7 +328,9 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "spacing <name> <value>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        try { h.setLineSpacing(Double.parseDouble(args[2])); } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        Double spacing = finiteDouble(args[2]);
+        if (spacing == null || spacing < 0 || spacing > 10) { sender.sendMessage(ChatColor.RED + "Spacing must be a finite number from 0 to 10."); return; }
+        h.setLineSpacing(spacing);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Spacing set.");
@@ -327,7 +341,9 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "billboard <name> <center|vertical|horizontal|fixed>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        h.setBillboard(args[2].toUpperCase(Locale.ROOT));
+        String billboard = args[2].toUpperCase(Locale.ROOT);
+        if (!Arrays.asList("CENTER", "VERTICAL", "HORIZONTAL", "FIXED").contains(billboard)) { sender.sendMessage(ChatColor.RED + "Billboard must be center, vertical, horizontal, or fixed."); return; }
+        h.setBillboard(billboard);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Billboard set.");
@@ -338,7 +354,9 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "range <name> <blocks>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        try { h.setViewRange(Integer.parseInt(args[2])); } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        int range = parseInt(args[2]);
+        if (range < 1 || range > 128) { sender.sendMessage(ChatColor.RED + "View range must be an integer from 1 to 128."); return; }
+        h.setViewRange(range);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Range set.");
@@ -351,6 +369,10 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
         String bg = args[2];
         if (bg.equalsIgnoreCase("remove") || bg.equalsIgnoreCase("none")) bg = "transparent";
+        if (!bg.equalsIgnoreCase("transparent") && !bg.matches("#?(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})")) {
+            sender.sendMessage(ChatColor.RED + "Use transparent or a valid #RRGGBB/#AARRGGBB color.");
+            return;
+        }
         h.setBackgroundColor(bg);
         holograms.renderer().render(h);
         holograms.save();
@@ -362,7 +384,9 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "type <name> <text|item|block>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        h.setType(args[2]);
+        String type = args[2].toUpperCase(Locale.ROOT);
+        if (!Arrays.asList("TEXT", "ITEM", "BLOCK").contains(type)) { sender.sendMessage(ChatColor.RED + "Type must be text, item, or block."); return; }
+        h.setType(type);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Type set.");
@@ -384,10 +408,25 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "brightness <name> <0-15|-1>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        try { h.setBrightness(Integer.parseInt(args[2])); } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        int brightness = parseInt(args[2]);
+        if (brightness < -1 || brightness > 15) { sender.sendMessage(ChatColor.RED + "Brightness must be an integer from -1 to 15."); return; }
+        h.setBrightness(brightness);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Brightness set.");
+    }
+
+    private void cmdLineWidth(CommandSender sender, String[] args) {
+        if (!perm(sender, "edit")) { noPerm(sender); return; }
+        if (args.length < 3) { usage(sender, "linewidth <name> <1-4096>"); return; }
+        Hologram h = holograms.get(args[1]);
+        if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
+        int width = parseInt(args[2]);
+        if (width < 1 || width > 4096) { sender.sendMessage(ChatColor.RED + "Line width must be an integer from 1 to 4096."); return; }
+        h.setLineWidth(width);
+        holograms.renderer().render(h);
+        holograms.save();
+        sender.sendMessage(ChatColor.GREEN + "Line width set.");
     }
 
     private void cmdTranslate(CommandSender sender, String[] args) {
@@ -395,11 +434,11 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 5) { usage(sender, "translate <name> <x> <y> <z>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        try {
-            h.setTranslationX(Double.parseDouble(args[2]));
-            h.setTranslationY(Double.parseDouble(args[3]));
-            h.setTranslationZ(Double.parseDouble(args[4]));
-        } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        Double x = finiteDouble(args[2]), y = finiteDouble(args[3]), z = finiteDouble(args[4]);
+        if (x == null || y == null || z == null) { sender.sendMessage(ChatColor.RED + "Translation values must be finite numbers."); return; }
+        h.setTranslationX(x);
+        h.setTranslationY(y);
+        h.setTranslationZ(z);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Translation set.");
@@ -410,10 +449,10 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 4) { usage(sender, "rotate <name> <yaw> <pitch>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        try {
-            h.setRotationYaw(Float.parseFloat(args[2]));
-            h.setRotationPitch(Float.parseFloat(args[3]));
-        } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        Float yaw = finiteFloat(args[2]), pitch = finiteFloat(args[3]);
+        if (yaw == null || pitch == null) { sender.sendMessage(ChatColor.RED + "Rotation values must be finite numbers."); return; }
+        h.setRotationYaw(yaw);
+        h.setRotationPitch(pitch);
         if (!h.billboard().equalsIgnoreCase("FIXED")) {
             h.setBillboard("FIXED");
             sender.sendMessage(ChatColor.GRAY + "Billboard set to FIXED to apply rotation.");
@@ -450,7 +489,9 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "scale <name> <factor>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        try { h.setScale(Float.parseFloat(args[2])); } catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Bad number."); return; }
+        Float scale = finiteFloat(args[2]);
+        if (scale == null || scale <= 0 || scale > 16) { sender.sendMessage(ChatColor.RED + "Scale must be a finite number greater than 0 and at most 16."); return; }
+        h.setScale(scale);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Scale set.");
@@ -461,7 +502,9 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "align <name> <left|center|right>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        h.setAlignment(args[2]);
+        String alignment = args[2].toUpperCase(Locale.ROOT);
+        if (!Arrays.asList("LEFT", "CENTER", "RIGHT").contains(alignment)) { sender.sendMessage(ChatColor.RED + "Alignment must be left, center, or right."); return; }
+        h.setAlignment(alignment);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Alignment set.");
@@ -472,10 +515,18 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 3) { usage(sender, "animation <name> <none|scroll|typewriter|rainbow|pulse> [speed]"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
-        h.setAnimation(args[2]);
-        if (args.length >= 4) {
-            try { h.setAnimationSpeed(Integer.parseInt(args[3])); } catch (NumberFormatException ignored) {}
+        String animation = args[2].toLowerCase(Locale.ROOT);
+        if (!Arrays.asList("none", "scroll", "typewriter", "rainbow", "pulse", "wave", "bounce", "glitch", "fade", "slide", "shake").contains(animation)) {
+            sender.sendMessage(ChatColor.RED + "Unknown animation."); return;
         }
+        Integer animationSpeed = null;
+        if (args.length >= 4) {
+            int speed = parseInt(args[3]);
+            if (speed < 1 || speed > 100) { sender.sendMessage(ChatColor.RED + "Animation speed must be an integer from 1 to 100."); return; }
+            animationSpeed = speed;
+        }
+        h.setAnimation(animation);
+        if (animationSpeed != null) h.setAnimationSpeed(animationSpeed);
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Animation set.");
@@ -500,7 +551,11 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
     private void cmdStatus(CommandSender sender) {
         if (!perm(sender, "status")) { noPerm(sender); return; }
         sender.sendMessage(ChatColor.GOLD + "hHolograms status");
+        sender.sendMessage(ChatColor.GRAY + "Plugin: " + plugin.getDescription().getVersion());
+        sender.sendMessage(ChatColor.GRAY + "Server: " + Bukkit.getName() + " " + Bukkit.getMinecraftVersion());
+        sender.sendMessage(ChatColor.GRAY + "Java: " + System.getProperty("java.version"));
         sender.sendMessage(ChatColor.GRAY + "Holograms: " + holograms.all().size());
+        sender.sendMessage(ChatColor.GRAY + "Display entities: " + holograms.all().stream().mapToInt(h -> h.entities().size()).sum());
         sender.sendMessage(ChatColor.GRAY + "PlaceholderAPI: " + (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null));
         sender.sendMessage(ChatColor.GRAY + "Refresh ticks: " + config.refreshIntervalTicks());
     }
@@ -509,17 +564,37 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         try { return Integer.parseInt(s); } catch (NumberFormatException e) { return -1; }
     }
 
+    private Double finiteDouble(String value) {
+        try {
+            double parsed = Double.parseDouble(value);
+            return Double.isFinite(parsed) ? parsed : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Float finiteFloat(String value) {
+        try {
+            float parsed = Float.parseFloat(value);
+            return Float.isFinite(parsed) ? parsed : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
-        List<String> subs = Arrays.asList("help","create","remove","list","info","move","tp","duplicate","edit","spacing","billboard","range","background","type","content","scale","align","animation","brightness","translate","rotate","condition","click","pause","resume","reload","status");
+        List<String> subs = Arrays.asList("help","create","remove","list","info","move","tp","duplicate","edit","spacing","billboard","range","background","type","content","scale","align","animation","brightness","linewidth","translate","rotate","condition","click","pause","resume","reload","status");
         if (args.length == 1) {
-            for (String s : subs) if (s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
+            for (String s : subs) {
+                if (hasCommandPermission(sender, s) && s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
+            }
             return out;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
-        if (args.length == 2 && (sub.equals("remove")||sub.equals("info")||sub.equals("move")||sub.equals("tp")||sub.equals("duplicate")||sub.equals("edit")||sub.equals("spacing")||sub.equals("billboard")||sub.equals("range")||sub.equals("background")||sub.equals("type")||sub.equals("content")||sub.equals("scale")||sub.equals("align")||sub.equals("animation")||sub.equals("brightness")||sub.equals("translate")||sub.equals("rotate")||sub.equals("condition")||sub.equals("click")||sub.equals("pause")||sub.equals("resume"))) {
-            for (Hologram h : holograms.all()) if (h.name().toLowerCase().startsWith(args[1].toLowerCase())) out.add(h.name());
+        if (args.length == 2 && hasCommandPermission(sender, sub) && (sub.equals("remove")||sub.equals("info")||sub.equals("move")||sub.equals("tp")||sub.equals("duplicate")||sub.equals("edit")||sub.equals("spacing")||sub.equals("billboard")||sub.equals("range")||sub.equals("background")||sub.equals("type")||sub.equals("content")||sub.equals("scale")||sub.equals("align")||sub.equals("animation")||sub.equals("brightness")||sub.equals("linewidth")||sub.equals("width")||sub.equals("translate")||sub.equals("rotate")||sub.equals("condition")||sub.equals("click")||sub.equals("pause")||sub.equals("resume"))) {
+            for (Hologram h : holograms.all()) if (h.name().toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(h.name());
             return out;
         }
         Hologram h = args.length > 1 ? holograms.get(args[1]) : null;
@@ -567,5 +642,23 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
             return out;
         }
         return Collections.emptyList();
+    }
+
+    private boolean hasCommandPermission(CommandSender sender, String subcommand) {
+        if (subcommand.equals("help")) return true;
+        String node = switch (subcommand.toLowerCase(Locale.ROOT)) {
+            case "create" -> "create";
+            case "remove", "delete" -> "remove";
+            case "list" -> "list";
+            case "info" -> "info";
+            case "move" -> "move";
+            case "tp", "teleport" -> "teleport";
+            case "duplicate", "copy" -> "duplicate";
+            case "edit", "spacing", "billboard", "range", "viewrange", "background", "bg", "type", "content", "scale", "align", "alignment", "brightness", "linewidth", "width", "translate", "rotate", "condition", "click", "onclick", "animation", "anim", "pause", "resume", "unpause" -> "edit";
+            case "reload" -> "reload";
+            case "status", "diag", "diagnostics" -> "status";
+            default -> "list";
+        };
+        return perm(sender, node);
     }
 }

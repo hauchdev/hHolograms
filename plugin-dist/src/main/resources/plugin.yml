@@ -8,6 +8,9 @@ website: https://github.com/hauchdev/hHolograms
 softdepend:
   - PlaceholderAPI
 permissions:
+  hholograms.admin:
+    description: Access all hHolograms management commands
+    default: op
   hholograms.*:
     description: All hHolograms permissions
     default: op
@@ -23,6 +26,7 @@ permissions:
       - hholograms.reload
       - hholograms.status
       - hholograms.trustedformatting
+      - hholograms.interact
   hholograms.create:
     default: op
   hholograms.remove:
@@ -45,6 +49,9 @@ permissions:
     default: op
   hholograms.trustedformatting:
     default: op
+  hholograms.interact:
+    description: Use player-facing hologram interactions
+    default: true
 commands:
   hholograms:
     description: Main hHolograms command.
