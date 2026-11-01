@@ -92,7 +92,7 @@ public final class HologramManager {
     }
 
     private void copy(Hologram a, Hologram b) {
-        b.setLines(a.lines());
+        b.setPages(a.pages(), a.currentPage());
         b.setLineSpacing(a.lineSpacing());
         b.setViewRange(a.viewRange());
         b.setBillboard(a.billboard());

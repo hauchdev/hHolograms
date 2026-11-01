@@ -10,7 +10,8 @@ import java.util.UUID;
 public final class Hologram {
     private final String name;
     private Location location;
-    private final List<HologramLine> lines = new ArrayList<>();
+    private final List<List<HologramLine>> pages = new ArrayList<>();
+    private int currentPage;
     private double lineSpacing;
     private int viewRange;
     private String billboard; // CENTER, VERTICAL, HORIZONTAL, FIXED
@@ -34,10 +35,13 @@ public final class Hologram {
     private String visibilityCondition; // placeholder expression, empty = always
     private String onClickCommand; // command to run on click
     private final List<UUID> entities = new ArrayList<>();
+    private final java.util.Map<UUID, Integer> interactionLines = new java.util.HashMap<>();
 
     public Hologram(String name, Location location) {
         this.name = name;
         this.location = location.clone();
+        this.pages.add(new ArrayList<>());
+        this.currentPage = 0;
         this.lineSpacing = 0.3;
         this.viewRange = 48;
         this.billboard = "CENTER";
@@ -65,10 +69,42 @@ public final class Hologram {
     public String name() { return name; }
     public Location location() { return location.clone(); }
     public void setLocation(Location l) { this.location = l.clone(); }
-    public List<HologramLine> lines() { return lines; }
+    public List<HologramLine> lines() { return pages.get(currentPage); }
     public void setLines(List<HologramLine> ls) {
-        lines.clear();
-        if (ls != null) ls.stream().filter(java.util.Objects::nonNull).map(HologramLine::copy).forEach(lines::add);
+        List<HologramLine> target = lines();
+        target.clear();
+        if (ls != null) ls.stream().filter(java.util.Objects::nonNull).map(HologramLine::copy).forEach(target::add);
+    }
+    public int pageCount() { return pages.size(); }
+    public int currentPage() { return currentPage; }
+    public boolean setCurrentPage(int page) {
+        if (page < 0 || page >= pages.size()) return false;
+        currentPage = page;
+        return true;
+    }
+    public void addPage() { pages.add(new ArrayList<>()); currentPage = pages.size() - 1; }
+    public boolean removeCurrentPage() {
+        if (pages.size() <= 1) return false;
+        pages.remove(currentPage);
+        currentPage = Math.min(currentPage, pages.size() - 1);
+        return true;
+    }
+    public List<List<HologramLine>> pages() {
+        List<List<HologramLine>> copy = new ArrayList<>(pages.size());
+        for (List<HologramLine> page : pages) copy.add(page.stream().map(HologramLine::copy).toList());
+        return copy;
+    }
+    public void setPages(List<List<HologramLine>> source, int selectedPage) {
+        pages.clear();
+        if (source != null) {
+            for (List<HologramLine> page : source) {
+                List<HologramLine> copied = new ArrayList<>();
+                if (page != null) page.stream().filter(java.util.Objects::nonNull).map(HologramLine::copy).forEach(copied::add);
+                pages.add(copied);
+            }
+        }
+        if (pages.isEmpty()) pages.add(new ArrayList<>());
+        currentPage = Math.max(0, Math.min(selectedPage, pages.size() - 1));
     }
     public double lineSpacing() { return lineSpacing; }
     public void setLineSpacing(double v) { this.lineSpacing = Double.isFinite(v) ? Math.max(0.0, Math.min(10.0, v)) : 0.3; }
@@ -116,7 +152,9 @@ public final class Hologram {
     public void setOnClickCommand(String v) { this.onClickCommand = v == null ? "" : v; }
 
     public List<UUID> entities() { return entities; }
-    public void clearEntities() { entities.clear(); }
+    public void clearEntities() { entities.clear(); interactionLines.clear(); }
+    public void registerLineInteraction(UUID entityId, int lineIndex) { interactionLines.put(entityId, lineIndex); }
+    public Integer interactionLine(UUID entityId) { return interactionLines.get(entityId); }
 
     private static double boundedTranslation(double value) {
         return Double.isFinite(value) ? Math.max(-128.0, Math.min(128.0, value)) : 0.0;

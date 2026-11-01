@@ -6,6 +6,7 @@ public final class HologramLine {
     private String animation;
     private int animationSpeed;
     private boolean paused;
+    private String onClickCommand;
 
     public HologramLine(String text) {
         this.text = text == null ? "" : text;
@@ -13,6 +14,7 @@ public final class HologramLine {
         this.animation = "none";
         this.animationSpeed = 1;
         this.paused = false;
+        this.onClickCommand = "";
     }
 
     /** Returns an independent copy suitable for duplicating a hologram. */
@@ -22,6 +24,7 @@ public final class HologramLine {
         copy.setAnimation(animation);
         copy.setAnimationSpeed(animationSpeed);
         copy.setPaused(paused);
+        copy.setOnClickCommand(onClickCommand);
         return copy;
     }
 
@@ -35,4 +38,6 @@ public final class HologramLine {
     public void setAnimationSpeed(int v) { this.animationSpeed = Math.max(1, Math.min(100, v)); }
     public boolean paused() { return paused; }
     public void setPaused(boolean v) { this.paused = v; }
+    public String onClickCommand() { return onClickCommand; }
+    public void setOnClickCommand(String command) { this.onClickCommand = command == null ? "" : command.trim(); }
 }

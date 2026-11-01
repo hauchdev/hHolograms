@@ -63,23 +63,19 @@ public final class HologramStorage {
                         s.getDouble("x"), s.getDouble("y"), s.getDouble("z"),
                         (float) s.getDouble("yaw", 0), (float) s.getDouble("pitch", 0));
                 Hologram h = new Hologram(name, loc);
-                Object rawLines = s.get("lines");
-                if (rawLines instanceof List<?> list) {
-                    for (Object value : list) {
-                        if (value instanceof String text) {
-                            h.lines().add(new HologramLine(text));
-                        } else if (value instanceof java.util.Map<?, ?> lineData) {
-                            Object textValue = lineData.get("text");
-                            HologramLine line = new HologramLine(textValue == null ? "" : String.valueOf(textValue));
-                            if (lineData.get("scale") instanceof Number scale) line.setScale(scale.floatValue());
-                            if (lineData.containsKey("animation")) line.setAnimation(String.valueOf(lineData.get("animation")));
-                            if (lineData.get("animation-speed") instanceof Number speed) line.setAnimationSpeed(speed.intValue());
-                            if (lineData.containsKey("paused")) line.setPaused(Boolean.parseBoolean(String.valueOf(lineData.get("paused"))));
-                            h.lines().add(line);
-                        }
+                Object rawPages = s.get("pages");
+                if (rawPages instanceof List<?> pageValues) {
+                    List<List<HologramLine>> pages = new ArrayList<>();
+                    for (Object pageValue : pageValues) {
+                        if (pageValue instanceof List<?> pageLines) pages.add(readLines(pageLines));
                     }
+                    h.setPages(pages, s.getInt("current-page", 0));
+                }
+                Object rawLines = s.get("lines");
+                if (!(rawPages instanceof List<?>) && rawLines instanceof List<?> list) {
+                    h.lines().addAll(readLines(list));
                 } else {
-                    for (String text : s.getStringList("lines")) h.lines().add(new HologramLine(text));
+                    if (!(rawPages instanceof List<?>)) for (String text : s.getStringList("lines")) h.lines().add(new HologramLine(text));
                 }
                 h.setLineSpacing(s.getDouble("line-spacing", 0.3));
                 h.setViewRange(s.getInt("view-range", 48));
@@ -111,6 +107,25 @@ public final class HologramStorage {
         return out;
     }
 
+    private List<HologramLine> readLines(List<?> values) {
+        List<HologramLine> lines = new ArrayList<>();
+        for (Object value : values) {
+            if (value instanceof String text) {
+                lines.add(new HologramLine(text));
+            } else if (value instanceof java.util.Map<?, ?> lineData) {
+                Object textValue = lineData.get("text");
+                HologramLine line = new HologramLine(textValue == null ? "" : String.valueOf(textValue));
+                if (lineData.get("scale") instanceof Number scale) line.setScale(scale.floatValue());
+                if (lineData.containsKey("animation")) line.setAnimation(String.valueOf(lineData.get("animation")));
+                if (lineData.get("animation-speed") instanceof Number speed) line.setAnimationSpeed(speed.intValue());
+                if (lineData.containsKey("paused")) line.setPaused(Boolean.parseBoolean(String.valueOf(lineData.get("paused"))));
+                if (lineData.containsKey("on-click")) line.setOnClickCommand(String.valueOf(lineData.get("on-click")));
+                lines.add(line);
+            }
+        }
+        return lines;
+    }
+
     public void save(List<Hologram> holograms) {
         FileConfiguration cfg = new YamlConfiguration();
         for (Hologram h : holograms) {
@@ -122,17 +137,11 @@ public final class HologramStorage {
             cfg.set(base + ".z", l.getZ());
             cfg.set(base + ".yaw", l.getYaw());
             cfg.set(base + ".pitch", l.getPitch());
-            java.util.List<java.util.Map<String, Object>> lineMaps = new java.util.ArrayList<>();
-            for (dev.hauchdev.hholograms.model.HologramLine hl : h.lines()) {
-                java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
-                m.put("text", hl.text());
-                m.put("scale", hl.scale());
-                m.put("animation", hl.animation());
-                m.put("animation-speed", hl.animationSpeed());
-                m.put("paused", hl.paused());
-                lineMaps.add(m);
-            }
-            cfg.set(base + ".lines", lineMaps);
+            List<List<java.util.Map<String, Object>>> pageMaps = new ArrayList<>();
+            for (List<HologramLine> page : h.pages()) pageMaps.add(writeLines(page));
+            cfg.set(base + ".pages", pageMaps);
+            cfg.set(base + ".current-page", h.currentPage());
+            cfg.set(base + ".lines", writeLines(h.lines())); // legacy readers display the active page
             cfg.set(base + ".line-spacing", h.lineSpacing());
             cfg.set(base + ".view-range", h.viewRange());
             cfg.set(base + ".billboard", h.billboard());
@@ -168,5 +177,20 @@ public final class HologramStorage {
         } catch (IOException e) {
             plugin.getLogger().severe("Failed to save holograms to " + file + ": " + e.getMessage());
         }
+    }
+
+    private List<java.util.Map<String, Object>> writeLines(List<HologramLine> lines) {
+        List<java.util.Map<String, Object>> maps = new ArrayList<>();
+        for (HologramLine line : lines) {
+            java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
+            data.put("text", line.text());
+            data.put("scale", line.scale());
+            data.put("animation", line.animation());
+            data.put("animation-speed", line.animationSpeed());
+            data.put("paused", line.paused());
+            data.put("on-click", line.onClickCommand());
+            maps.add(data);
+        }
+        return maps;
     }
 }
