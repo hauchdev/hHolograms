@@ -152,21 +152,22 @@ public final class UpdateManager {
             String text = i < base.size() ? base.get(i) : "";
             String animation = "none".equalsIgnoreCase(line.animation()) ? hologram.animation() : line.animation();
             int speed = "none".equalsIgnoreCase(line.animation()) ? hologram.animationSpeed() : line.animationSpeed();
-            if (hologram.paused() || line.paused() || text.indexOf('<') >= 0) {
+            if (hologram.paused() || line.paused()) {
                 output.add(text);
                 continue;
             }
+            boolean miniMessage = text.indexOf('<') >= 0;
             int frame = tick / Math.max(1, speed);
             switch (animation.toLowerCase(Locale.ROOT)) {
                 case "scroll" -> {
-                    if (text.isEmpty()) output.add(text);
+                    if (miniMessage || text.isEmpty()) output.add(text);
                     else {
                         int shift = frame % text.length();
                         output.add(text.substring(shift) + text.substring(0, shift));
                     }
                 }
                 case "typewriter" -> {
-                    if (text.isEmpty()) output.add(text);
+                    if (miniMessage || text.isEmpty()) output.add(text);
                     else {
                         int length = Math.min(text.length(), frame % (text.length() + 1));
                         output.add(text.substring(0, length));
@@ -174,18 +175,18 @@ public final class UpdateManager {
                 }
                 case "rainbow" -> output.add("<rainbow>" + text + "</rainbow>");
                 case "pulse" -> output.add(frame % 2 == 0 ? "<bold>" + text + "</bold>" : text);
-                case "wave" -> output.add(wave(text, frame));
-                case "bounce" -> output.add(" ".repeat(frame % 6) + text);
-                case "glitch" -> output.add(frame % 3 == 0 ? text.replace("a", "@").replace("e", "3").replace("i", "1") : text);
+                case "wave" -> output.add(miniMessage ? text : wave(text, frame));
+                case "bounce" -> output.add(miniMessage ? text : " ".repeat(frame % 6) + text);
+                case "glitch" -> output.add(miniMessage ? text : frame % 3 == 0 ? text.replace("a", "@").replace("e", "3").replace("i", "1") : text);
                 case "fade" -> output.add(frame % 2 == 0 ? "<gray>" + text + "</gray>" : text);
                 case "slide" -> {
-                    if (text.isEmpty()) output.add(text);
+                    if (miniMessage || text.isEmpty()) output.add(text);
                     else {
                         int shift = frame % text.length();
                         output.add(text.substring(text.length() - shift) + text.substring(0, text.length() - shift));
                     }
                 }
-                case "shake" -> output.add(frame % 2 == 0 ? " " + text : text + " ");
+                case "shake" -> output.add(miniMessage ? text : frame % 2 == 0 ? " " + text : text + " ");
                 default -> output.add(text);
             }
         }

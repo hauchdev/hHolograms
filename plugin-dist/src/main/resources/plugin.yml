@@ -27,6 +27,7 @@ permissions:
       - hholograms.status
       - hholograms.trustedformatting
       - hholograms.interact
+      - hholograms.interact.console
   hholograms.create:
     default: op
   hholograms.remove:
@@ -52,6 +53,9 @@ permissions:
   hholograms.interact:
     description: Use player-facing hologram interactions
     default: true
+  hholograms.interact.console:
+    description: Trigger hologram actions explicitly configured to run as console
+    default: op
 commands:
   hholograms:
     description: Main hHolograms command.
