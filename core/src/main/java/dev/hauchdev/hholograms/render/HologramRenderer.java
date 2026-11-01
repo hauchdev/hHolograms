@@ -23,15 +23,22 @@ public final class HologramRenderer {
         remove(h);
         Location base = h.location();
         String type = h.type();
-        if ("ITEM".equalsIgnoreCase(type)) {
+        if ("ITEM".equalsIgnoreCase(type) || "HEAD".equalsIgnoreCase(type)) {
             Location loc = base.clone();
-            org.bukkit.Material material = org.bukkit.Material.matchMaterial(h.content());
+            org.bukkit.Material material = "HEAD".equalsIgnoreCase(type)
+                    ? org.bukkit.Material.PLAYER_HEAD : org.bukkit.Material.matchMaterial(h.content());
             if (material == null || material.isAir()) {
                 Bukkit.getLogger().warning("[hHolograms] Hologram '" + h.name() + "' has an invalid item material '" + h.content() + "'; it was not rendered.");
                 return;
             }
             ItemDisplay id = base.getWorld().spawn(loc, ItemDisplay.class);
-            id.setItemStack(new org.bukkit.inventory.ItemStack(material));
+            org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(material);
+            if ("HEAD".equalsIgnoreCase(type) && !h.content().isBlank()) {
+                org.bukkit.inventory.meta.SkullMeta skull = (org.bukkit.inventory.meta.SkullMeta) stack.getItemMeta();
+                skull.setOwningPlayer(Bukkit.getOfflinePlayer(h.content()));
+                stack.setItemMeta(skull);
+            }
+            id.setItemStack(stack);
             id.setBillboard(parseBillboard(h.billboard()));
             id.setViewRange((float) h.viewRange());
             applyBrightness(id, h.brightness());
@@ -95,6 +102,20 @@ public final class HologramRenderer {
             td.setLineWidth(h.lineWidth());
             applyBackground(td, h.backgroundColor());
             h.entities().add(td.getUniqueId());
+            if (!hl.onClickCommand().isBlank() || !h.onClickCommand().isBlank()) {
+                float width = Math.max(0.6f, Math.min(8.0f, raw.codePointCount(0, raw.length()) * 0.12f * s));
+                float height = Math.max(0.35f, Math.min(2.0f, 0.32f * s));
+                Location hitboxLocation = loc.clone();
+                org.bukkit.entity.Interaction interaction = base.getWorld().spawn(hitboxLocation, org.bukkit.entity.Interaction.class);
+                interaction.setInteractionWidth(width);
+                interaction.setInteractionHeight(height);
+                interaction.setResponsive(true);
+                interaction.setGravity(false);
+                interaction.setInvulnerable(true);
+                interaction.setPersistent(false);
+                h.entities().add(interaction.getUniqueId());
+                if (!hl.onClickCommand().isBlank()) h.registerLineInteraction(interaction.getUniqueId(), i);
+            }
         }
     }
 
@@ -105,8 +126,8 @@ public final class HologramRenderer {
             if (e instanceof TextDisplay td) {
                 String r = (i < rendered.size()) ? rendered.get(i) : "";
                 td.text(deserialize(h.name(), r));
+                i++;
             }
-            i++;
         }
     }
 

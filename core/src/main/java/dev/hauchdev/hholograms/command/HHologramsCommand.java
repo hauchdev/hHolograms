@@ -55,6 +55,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
                 case "tp", "teleport" -> cmdTeleport(sender, args);
                 case "duplicate", "copy" -> cmdDuplicate(sender, args);
                 case "edit" -> cmdEdit(sender, args);
+                case "page" -> cmdPage(sender, args);
                 case "spacing" -> cmdSpacing(sender, args);
                 case "billboard" -> cmdBillboard(sender, args);
                 case "range", "viewrange" -> cmdRange(sender, args);
@@ -135,11 +136,13 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
             "/hh edit <name> insert <index> <text>",
             "/hh edit <name> remove <index>",
             "/hh edit <name> clear",
+            "/hh edit <name> click <line> <command...|clear>",
+            "/hh page <name> <next|prev|set|add|remove> [page]",
             "/hh spacing <name> <value>",
             "/hh billboard <name> <center|vertical|horizontal|fixed>",
             "/hh range <name> <blocks>",
             "/hh background <name> <transparent|hex>",
-            "/hh type <name> <text|item|block>",
+            "/hh type <name> <text|item|block|head>",
             "/hh content <name> <material/block>",
             "/hh scale <name> <factor>",
             "/hh align <name> <left|center|right>",
@@ -197,6 +200,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.GOLD + "Hologram: " + h.name());
         sender.sendMessage(ChatColor.GRAY + "Location: " + fmtLoc(h.location()));
         sender.sendMessage(ChatColor.GRAY + "Lines: " + h.lines().size() + " | Spacing: " + h.lineSpacing() + " | Width: " + h.lineWidth());
+        sender.sendMessage(ChatColor.GRAY + "Page: " + (h.currentPage() + 1) + "/" + h.pageCount());
         sender.sendMessage(ChatColor.GRAY + "Billboard: " + h.billboard() + " | Range: " + h.viewRange());
         sender.sendMessage(ChatColor.GRAY + "Background: " + h.backgroundColor() + " | Shadow: " + h.shadowed() + " | SeeThrough: " + h.seeThrough());
         sender.sendMessage(ChatColor.GRAY + "Type: " + h.type() + " | Content: " + h.content());
@@ -289,6 +293,12 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
                 h.lines().get(idx).setAnimation(animation);
                 if (animationSpeed != null) h.lines().get(idx).setAnimationSpeed(animationSpeed);
             }
+            case "click" -> {
+                if (args.length < 5) { usage(sender, "edit <name> click <index> <command...|clear>"); return; }
+                int idx = parseInt(args[3]);
+                if (idx < 0 || idx >= h.lines().size()) { sender.sendMessage(ChatColor.RED + "Bad index."); return; }
+                h.lines().get(idx).setOnClickCommand(args[4].equalsIgnoreCase("clear") ? "" : join(args, 4));
+            }
             case "pause" -> {
                 if (args.length < 4) { usage(sender, "edit <name> pause <index>"); return; }
                 int idx = parseInt(args[3]);
@@ -321,6 +331,40 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Updated.");
+    }
+
+    private void cmdPage(CommandSender sender, String[] args) {
+        if (args.length < 3) { usage(sender, "page <name> <next|prev|set|add|remove> [page]"); return; }
+        Hologram h = holograms.get(args[1]);
+        if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
+        String operation = args[2].toLowerCase(Locale.ROOT);
+        switch (operation) {
+            case "next", "prev" -> {
+                if (!perm(sender, "interact")) { noPerm(sender); return; }
+                int next = operation.equals("next")
+                        ? (h.currentPage() + 1) % h.pageCount()
+                        : (h.currentPage() - 1 + h.pageCount()) % h.pageCount();
+                h.setCurrentPage(next);
+            }
+            case "set", "goto" -> {
+                if (!perm(sender, "edit")) { noPerm(sender); return; }
+                if (args.length < 4) { usage(sender, "page <name> set <1-" + h.pageCount() + ">"); return; }
+                int page = parseInt(args[3]) - 1;
+                if (!h.setCurrentPage(page)) { sender.sendMessage(ChatColor.RED + "Page must be from 1 to " + h.pageCount() + "."); return; }
+            }
+            case "add" -> {
+                if (!perm(sender, "edit")) { noPerm(sender); return; }
+                h.addPage();
+            }
+            case "remove" -> {
+                if (!perm(sender, "edit")) { noPerm(sender); return; }
+                if (!h.removeCurrentPage()) { sender.sendMessage(ChatColor.RED + "A hologram must keep at least one page."); return; }
+            }
+            default -> { sender.sendMessage(ChatColor.RED + "Use next, prev, set, add, or remove."); return; }
+        }
+        holograms.renderer().render(h);
+        holograms.save();
+        sender.sendMessage(ChatColor.GREEN + "Showing page " + (h.currentPage() + 1) + "/" + h.pageCount() + ".");
     }
 
     private void cmdSpacing(CommandSender sender, String[] args) {
@@ -381,11 +425,11 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
 
     private void cmdType(CommandSender sender, String[] args) {
         if (!perm(sender, "edit")) { noPerm(sender); return; }
-        if (args.length < 3) { usage(sender, "type <name> <text|item|block>"); return; }
+        if (args.length < 3) { usage(sender, "type <name> <text|item|block|head>"); return; }
         Hologram h = holograms.get(args[1]);
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
         String type = args[2].toUpperCase(Locale.ROOT);
-        if (!Arrays.asList("TEXT", "ITEM", "BLOCK").contains(type)) { sender.sendMessage(ChatColor.RED + "Type must be text, item, or block."); return; }
+        if (!Arrays.asList("TEXT", "ITEM", "BLOCK", "HEAD").contains(type)) { sender.sendMessage(ChatColor.RED + "Type must be text, item, block, or head."); return; }
         h.setType(type);
         holograms.renderer().render(h);
         holograms.save();
@@ -480,6 +524,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         if (h == null) { sender.sendMessage(ChatColor.RED + "Not found."); return; }
         if (args.length < 3 || args[2].equalsIgnoreCase("clear")) h.setOnClickCommand("");
         else h.setOnClickCommand(join(args, 2));
+        holograms.renderer().render(h);
         holograms.save();
         sender.sendMessage(ChatColor.GREEN + "Click command set.");
     }
@@ -585,7 +630,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
-        List<String> subs = Arrays.asList("help","create","remove","list","info","move","tp","duplicate","edit","spacing","billboard","range","background","type","content","scale","align","animation","brightness","linewidth","translate","rotate","condition","click","pause","resume","reload","status");
+        List<String> subs = Arrays.asList("help","create","remove","list","info","move","tp","duplicate","edit","page","spacing","billboard","range","background","type","content","scale","align","animation","brightness","linewidth","translate","rotate","condition","click","pause","resume","reload","status");
         if (args.length == 1) {
             for (String s : subs) {
                 if (hasCommandPermission(sender, s) && s.startsWith(args[0].toLowerCase(Locale.ROOT))) out.add(s);
@@ -593,6 +638,18 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
             return out;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
+        if (sub.equals("page") && args.length == 2) {
+            for (Hologram hologram : holograms.all()) if (hologram.name().toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(hologram.name());
+            return out;
+        }
+        if (sub.equals("page") && args.length == 3) {
+            for (String option : Arrays.asList("next", "prev", "set", "add", "remove")) {
+                boolean allowed = Arrays.asList("next", "prev").contains(option)
+                        ? perm(sender, "interact") : perm(sender, "edit");
+                if (allowed && option.startsWith(args[2].toLowerCase(Locale.ROOT))) out.add(option);
+            }
+            return out;
+        }
         if (args.length == 2 && hasCommandPermission(sender, sub) && (sub.equals("remove")||sub.equals("info")||sub.equals("move")||sub.equals("tp")||sub.equals("duplicate")||sub.equals("edit")||sub.equals("spacing")||sub.equals("billboard")||sub.equals("range")||sub.equals("background")||sub.equals("type")||sub.equals("content")||sub.equals("scale")||sub.equals("align")||sub.equals("animation")||sub.equals("brightness")||sub.equals("linewidth")||sub.equals("width")||sub.equals("translate")||sub.equals("rotate")||sub.equals("condition")||sub.equals("click")||sub.equals("pause")||sub.equals("resume"))) {
             for (Hologram h : holograms.all()) if (h.name().toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))) out.add(h.name());
             return out;
@@ -600,7 +657,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
         Hologram h = args.length > 1 ? holograms.get(args[1]) : null;
         if (sub.equals("edit")) {
             if (args.length == 3) {
-                for (String s : Arrays.asList("add","set","insert","remove","clear","swap","scale","animation","pause","resume")) if (s.startsWith(args[2].toLowerCase())) out.add(s);
+                for (String s : Arrays.asList("add","set","insert","remove","clear","swap","scale","animation","click","pause","resume")) if (s.startsWith(args[2].toLowerCase())) out.add(s);
                 return out;
             }
             if (h != null && args.length == 4) {
@@ -622,7 +679,7 @@ public final class HHologramsCommand implements CommandExecutor, TabCompleter {
             return out;
         }
         if (sub.equals("type") && args.length == 3) {
-            for (String s : Arrays.asList("TEXT","ITEM","BLOCK")) if (s.toLowerCase().startsWith(args[2].toLowerCase())) out.add(s);
+            for (String s : Arrays.asList("TEXT","ITEM","BLOCK","HEAD")) if (s.toLowerCase().startsWith(args[2].toLowerCase())) out.add(s);
             return out;
         }
         if (sub.equals("background") && args.length == 3) {

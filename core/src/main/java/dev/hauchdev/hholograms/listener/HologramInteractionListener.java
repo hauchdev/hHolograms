@@ -29,17 +29,36 @@ public final class HologramInteractionListener implements Listener {
         Player p = e.getPlayer();
         for (Hologram h : Bootstrap.context().holograms.all()) {
             if (!h.entities().contains(e.getRightClicked().getUniqueId())) continue;
-            String cmd = h.onClickCommand();
+            Integer lineIndex = h.interactionLine(e.getRightClicked().getUniqueId());
+            String cmd = lineIndex == null ? h.onClickCommand()
+                    : lineIndex < h.lines().size() ? h.lines().get(lineIndex).onClickCommand() : "";
             if (cmd == null || cmd.isBlank()) return;
+            e.setCancelled(true);
             if (!p.hasPermission("hholograms.interact")) return;
-            long now = System.currentTimeMillis();
-            Long previous = lastClick.put(p.getUniqueId(), now);
-            if (previous != null && now - previous < CLICK_COOLDOWN_MILLIS) return;
-            String toRun = cmd.replace("{player}", p.getName());
+            String toRun = cmd.replace("{player}", p.getName())
+                    .replace("{uuid}", p.getUniqueId().toString())
+                    .replace("{world}", p.getWorld().getName())
+                    .replace("{x}", String.format(java.util.Locale.ROOT, "%.2f", p.getLocation().getX()))
+                    .replace("{y}", String.format(java.util.Locale.ROOT, "%.2f", p.getLocation().getY()))
+                    .replace("{z}", String.format(java.util.Locale.ROOT, "%.2f", p.getLocation().getZ()));
+            if (toRun.regionMatches(true, 0, "console:", 0, "console:".length())) {
+                if (!p.hasPermission("hholograms.interact.console")) return;
+                if (isCoolingDown(p)) return;
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), toRun.substring("console:".length()).trim());
+                return;
+            }
+            if (isCoolingDown(p)) return;
             if (toRun.startsWith("/")) toRun = toRun.substring(1);
             Bukkit.dispatchCommand(p, toRun);
-            e.setCancelled(true);
             return;
         }
+    }
+
+    private boolean isCoolingDown(Player player) {
+        long now = System.currentTimeMillis();
+        Long previous = lastClick.get(player.getUniqueId());
+        if (previous != null && now - previous < CLICK_COOLDOWN_MILLIS) return true;
+        lastClick.put(player.getUniqueId(), now);
+        return false;
     }
 }
