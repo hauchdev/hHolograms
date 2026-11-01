@@ -1,6 +1,7 @@
 package dev.hauchdev.hholograms.render;
 
 import dev.hauchdev.hholograms.model.Hologram;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -24,11 +25,13 @@ public final class HologramRenderer {
         String type = h.type();
         if ("ITEM".equalsIgnoreCase(type)) {
             Location loc = base.clone();
+            org.bukkit.Material material = org.bukkit.Material.matchMaterial(h.content());
+            if (material == null || material.isAir()) {
+                Bukkit.getLogger().warning("[hHolograms] Hologram '" + h.name() + "' has an invalid item material '" + h.content() + "'; it was not rendered.");
+                return;
+            }
             ItemDisplay id = base.getWorld().spawn(loc, ItemDisplay.class);
-            try {
-                org.bukkit.Material m = org.bukkit.Material.valueOf(h.content().toUpperCase());
-                id.setItemStack(new org.bukkit.inventory.ItemStack(m));
-            } catch (Exception ignored) {}
+            id.setItemStack(new org.bukkit.inventory.ItemStack(material));
             id.setBillboard(parseBillboard(h.billboard()));
             id.setViewRange((float) h.viewRange());
             applyBrightness(id, h.brightness());
@@ -37,14 +40,21 @@ public final class HologramRenderer {
                 new AxisAngle4f((float)Math.toRadians(h.rotationYaw()), 0,1,0),
                 new Vector3f(h.scale(),h.scale(),h.scale()),
                 new AxisAngle4f((float)Math.toRadians(h.rotationPitch()), 1,0,0));
-            try { id.setTransformation(itr); } catch (Throwable ignored) {}
+            id.setTransformation(itr);
             h.entities().add(id.getUniqueId());
             return;
         }
         if ("BLOCK".equalsIgnoreCase(type)) {
             Location loc = base.clone();
+            org.bukkit.block.data.BlockData blockData;
+            try {
+                blockData = Bukkit.createBlockData(h.content().isEmpty() ? "STONE" : h.content());
+            } catch (IllegalArgumentException e) {
+                Bukkit.getLogger().warning("[hHolograms] Hologram '" + h.name() + "' has invalid block data '" + h.content() + "'; it was not rendered.");
+                return;
+            }
             BlockDisplay bd = base.getWorld().spawn(loc, BlockDisplay.class);
-            try { bd.setBlock(org.bukkit.Bukkit.createBlockData(h.content().isEmpty() ? "STONE" : h.content())); } catch (Exception ignored) {}
+            bd.setBlock(blockData);
             bd.setBillboard(parseBillboard(h.billboard()));
             bd.setViewRange((float) h.viewRange());
             applyBrightness(bd, h.brightness());
@@ -53,7 +63,7 @@ public final class HologramRenderer {
                 new AxisAngle4f((float)Math.toRadians(h.rotationYaw()), 0,1,0),
                 new Vector3f(h.scale(),h.scale(),h.scale()),
                 new AxisAngle4f((float)Math.toRadians(h.rotationPitch()), 1,0,0));
-            try { bd.setTransformation(btr); } catch (Throwable ignored) {}
+            bd.setTransformation(btr);
             h.entities().add(bd.getUniqueId());
             return;
         }
@@ -63,12 +73,16 @@ public final class HologramRenderer {
             String raw = hl.text();
             Location loc = base.clone().add(0, -i * h.lineSpacing(), 0);
             TextDisplay td = base.getWorld().spawn(loc, TextDisplay.class);
-            td.text(MM.deserialize(raw));
+            td.text(deserialize(h.name(), raw));
             td.setBillboard(parseBillboard(h.billboard()));
             td.setSeeThrough(h.seeThrough());
             td.setShadowed(h.shadowed());
             td.setViewRange((float) h.viewRange());
-            try { td.setAlignment(TextDisplay.TextAlignment.valueOf(h.alignment())); } catch (Exception ignored) { td.setAlignment(TextDisplay.TextAlignment.CENTER); }
+            try { td.setAlignment(TextDisplay.TextAlignment.valueOf(h.alignment())); }
+            catch (IllegalArgumentException e) {
+                Bukkit.getLogger().warning("[hHolograms] Invalid alignment '" + h.alignment() + "' on hologram '" + h.name() + "'; using CENTER.");
+                td.setAlignment(TextDisplay.TextAlignment.CENTER);
+            }
             float ls = hl.scale();
             applyBrightness(td, h.brightness());
             float s = h.scale()*ls;
@@ -77,8 +91,8 @@ public final class HologramRenderer {
                 new AxisAngle4f((float)Math.toRadians(h.rotationYaw()), 0,1,0),
                 new Vector3f(s,s,s),
                 new AxisAngle4f((float)Math.toRadians(h.rotationPitch()), 1,0,0));
-            try { td.setTransformation(tr); } catch (Throwable ignored) {}
-            try { td.setLineWidth(1000); } catch (Throwable ignored) {}
+            td.setTransformation(tr);
+            td.setLineWidth(h.lineWidth());
             applyBackground(td, h.backgroundColor());
             h.entities().add(td.getUniqueId());
         }
@@ -90,7 +104,7 @@ public final class HologramRenderer {
             org.bukkit.entity.Entity e = org.bukkit.Bukkit.getEntity(id);
             if (e instanceof TextDisplay td) {
                 String r = (i < rendered.size()) ? rendered.get(i) : "";
-                td.text(MiniMessage.miniMessage().deserialize(r));
+                td.text(deserialize(h.name(), r));
             }
             i++;
         }
@@ -107,24 +121,29 @@ public final class HologramRenderer {
     private void applyBrightness(org.bukkit.entity.Display d, int b) {
         if (b < 0) return;
         int v = Math.max(0, Math.min(15, b));
-        try { d.setBrightness(new org.bukkit.entity.Display.Brightness(v, v)); } catch (Throwable ignored) {}
+        d.setBrightness(new org.bukkit.entity.Display.Brightness(v, v));
     }
 
     private Display.Billboard parseBillboard(String s) {
         if (s == null) return Display.Billboard.CENTER;
-        try { return Display.Billboard.valueOf(s.toUpperCase()); }
-        catch (Exception e) { return Display.Billboard.CENTER; }
+        try { return Display.Billboard.valueOf(s.toUpperCase(java.util.Locale.ROOT)); }
+        catch (IllegalArgumentException e) {
+            Bukkit.getLogger().warning("[hHolograms] Invalid billboard mode '" + s + "'; using CENTER.");
+            return Display.Billboard.CENTER;
+        }
     }
 
     private void applyBackground(TextDisplay td, String bg) {
         if (bg == null || bg.equalsIgnoreCase("transparent") || bg.equalsIgnoreCase("none") || bg.equalsIgnoreCase("remove")) {
             td.setDefaultBackground(false);
-            try { td.setBackgroundColor(org.bukkit.Color.fromARGB(0, 0, 0, 0)); } catch (Throwable ignored) {}
+            td.setBackgroundColor(org.bukkit.Color.fromARGB(0, 0, 0, 0));
             return;
         }
         Color c = parseColor(bg);
         if (c == null) {
             td.setDefaultBackground(false);
+            td.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+            Bukkit.getLogger().warning("[hHolograms] Invalid text background '" + bg + "'; using transparent background.");
             return;
         }
         td.setDefaultBackground(false);
@@ -151,5 +170,14 @@ public final class HologramRenderer {
             }
         } catch (Exception ignored) {}
         return null;
+    }
+
+    private Component deserialize(String hologramName, String text) {
+        try {
+            return MM.deserialize(text);
+        } catch (RuntimeException e) {
+            Bukkit.getLogger().warning("[hHolograms] Invalid MiniMessage in hologram '" + hologramName + "'; displaying it as plain text.");
+            return Component.text(text);
+        }
     }
 }
