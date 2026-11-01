@@ -25,6 +25,7 @@ public final class Hologram {
     private String type; // TEXT, ITEM, BLOCK
     private String content; // material name or item
     private int brightness; // 0-15 (block & sky)
+    private int lineWidth;
     private double translationX;
     private double translationY;
     private double translationZ;
@@ -51,6 +52,7 @@ public final class Hologram {
         this.type = "TEXT";
         this.content = "";
         this.brightness = -1; // -1 = default
+        this.lineWidth = 1000;
         this.translationX = 0;
         this.translationY = 0;
         this.translationZ = 0;
@@ -64,45 +66,50 @@ public final class Hologram {
     public Location location() { return location.clone(); }
     public void setLocation(Location l) { this.location = l.clone(); }
     public List<HologramLine> lines() { return lines; }
-    public void setLines(List<HologramLine> ls) { lines.clear(); lines.addAll(ls); }
+    public void setLines(List<HologramLine> ls) {
+        lines.clear();
+        if (ls != null) ls.stream().filter(java.util.Objects::nonNull).map(HologramLine::copy).forEach(lines::add);
+    }
     public double lineSpacing() { return lineSpacing; }
-    public void setLineSpacing(double v) { this.lineSpacing = v; }
+    public void setLineSpacing(double v) { this.lineSpacing = Double.isFinite(v) ? Math.max(0.0, Math.min(10.0, v)) : 0.3; }
     public int viewRange() { return viewRange; }
-    public void setViewRange(int v) { this.viewRange = v; }
+    public void setViewRange(int v) { this.viewRange = Math.max(1, Math.min(128, v)); }
     public String billboard() { return billboard; }
-    public void setBillboard(String v) { this.billboard = v; }
+    public void setBillboard(String v) { this.billboard = v == null ? "CENTER" : v.toUpperCase(java.util.Locale.ROOT); }
     public boolean seeThrough() { return seeThrough; }
     public void setSeeThrough(boolean v) { this.seeThrough = v; }
     public boolean shadowed() { return shadowed; }
     public void setShadowed(boolean v) { this.shadowed = v; }
     public String backgroundColor() { return backgroundColor; }
-    public void setBackgroundColor(String v) { this.backgroundColor = v; }
+    public void setBackgroundColor(String v) { this.backgroundColor = v == null ? "transparent" : v; }
     public String animation() { return animation; }
-    public void setAnimation(String v) { this.animation = v; }
+    public void setAnimation(String v) { this.animation = v == null ? "none" : v.toLowerCase(java.util.Locale.ROOT); }
     public int animationSpeed() { return animationSpeed; }
-    public void setAnimationSpeed(int v) { this.animationSpeed = Math.max(1, v); }
+    public void setAnimationSpeed(int v) { this.animationSpeed = Math.max(1, Math.min(100, v)); }
     public boolean paused() { return paused; }
     public void setPaused(boolean v) { this.paused = v; }
     public float scale() { return scale; }
-    public void setScale(float v) { this.scale = v <= 0 ? 1.0f : v; }
+    public void setScale(float v) { this.scale = !Float.isFinite(v) || v <= 0 ? 1.0f : Math.min(16.0f, v); }
     public String alignment() { return alignment; }
-    public void setAlignment(String v) { this.alignment = v == null ? "CENTER" : v.toUpperCase(); }
+    public void setAlignment(String v) { this.alignment = v == null ? "CENTER" : v.toUpperCase(java.util.Locale.ROOT); }
     public String type() { return type; }
     public void setType(String v) { this.type = v == null ? "TEXT" : v.toUpperCase(); }
     public String content() { return content; }
     public void setContent(String v) { this.content = v == null ? "" : v; }
     public int brightness() { return brightness; }
-    public void setBrightness(int v) { this.brightness = v; }
+    public void setBrightness(int v) { this.brightness = v < 0 ? -1 : Math.min(15, v); }
+    public int lineWidth() { return lineWidth; }
+    public void setLineWidth(int v) { this.lineWidth = Math.max(1, Math.min(4096, v)); }
     public double translationX() { return translationX; }
-    public void setTranslationX(double v) { this.translationX = v; }
+    public void setTranslationX(double v) { this.translationX = boundedTranslation(v); }
     public double translationY() { return translationY; }
-    public void setTranslationY(double v) { this.translationY = v; }
+    public void setTranslationY(double v) { this.translationY = boundedTranslation(v); }
     public double translationZ() { return translationZ; }
-    public void setTranslationZ(double v) { this.translationZ = v; }
+    public void setTranslationZ(double v) { this.translationZ = boundedTranslation(v); }
     public float rotationYaw() { return rotationYaw; }
-    public void setRotationYaw(float v) { this.rotationYaw = v; }
+    public void setRotationYaw(float v) { this.rotationYaw = Float.isFinite(v) ? v : 0; }
     public float rotationPitch() { return rotationPitch; }
-    public void setRotationPitch(float v) { this.rotationPitch = v; }
+    public void setRotationPitch(float v) { this.rotationPitch = Float.isFinite(v) ? Math.max(-90, Math.min(90, v)) : 0; }
     public String visibilityCondition() { return visibilityCondition; }
     public void setVisibilityCondition(String v) { this.visibilityCondition = v == null ? "" : v; }
     public String onClickCommand() { return onClickCommand; }
@@ -110,4 +117,8 @@ public final class Hologram {
 
     public List<UUID> entities() { return entities; }
     public void clearEntities() { entities.clear(); }
+
+    private static double boundedTranslation(double value) {
+        return Double.isFinite(value) ? Math.max(-128.0, Math.min(128.0, value)) : 0.0;
+    }
 }

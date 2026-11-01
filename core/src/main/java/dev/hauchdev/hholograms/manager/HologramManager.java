@@ -26,22 +26,22 @@ public final class HologramManager {
         this.config = config;
         this.storage = storage;
         for (Hologram h : storage.load()) {
-            holograms.put(h.name().toLowerCase(), h);
+            holograms.put(key(h.name()), h);
         }
         for (Hologram h : holograms.values()) renderer.render(h);
     }
 
     public Collection<Hologram> all() { return new ArrayList<>(holograms.values()); }
-    public Hologram get(String name) { return name == null ? null : holograms.get(name.toLowerCase()); }
+    public Hologram get(String name) { return name == null ? null : holograms.get(key(name)); }
     public boolean exists(String name) { return get(name) != null; }
 
     public Hologram create(String name, Location loc) {
-        if (exists(name)) return null;
+        if (!validName(name) || !validLocation(loc) || exists(name)) return null;
         Hologram h = new Hologram(name, loc);
         h.setLineSpacing(config.defaultSpacing());
         h.setViewRange(config.defaultViewRange());
         h.setBillboard(config.defaultBillboard());
-        holograms.put(name.toLowerCase(), h);
+        holograms.put(key(name), h);
         renderer.render(h);
         save();
         return h;
@@ -51,20 +51,20 @@ public final class HologramManager {
         Hologram h = get(name);
         if (h == null) return false;
         renderer.remove(h);
-        holograms.remove(name.toLowerCase());
+        holograms.remove(key(name));
         save();
         return true;
     }
 
     public boolean rename(String oldName, String newName) {
         Hologram h = get(oldName);
-        if (h == null || exists(newName)) return false;
-        // recreate with new name by reflection-ish: create new and copy
+        if (h == null || !validName(newName) || exists(newName)) return false;
+        // The name is immutable, so create a replacement and copy its configuration.
         Hologram n = new Hologram(newName, h.location());
         copy(h, n);
         renderer.remove(h);
-        holograms.remove(oldName.toLowerCase());
-        holograms.put(newName.toLowerCase(), n);
+        holograms.remove(key(oldName));
+        holograms.put(key(newName), n);
         renderer.render(n);
         save();
         return true;
@@ -72,10 +72,11 @@ public final class HologramManager {
 
     public Hologram duplicate(String sourceName, String newName, Location loc) {
         Hologram src = get(sourceName);
-        if (src == null || exists(newName)) return null;
-        Hologram n = new Hologram(newName, loc == null ? src.location() : loc);
+        Location destination = loc == null && src != null ? src.location() : loc;
+        if (src == null || !validName(newName) || !validLocation(destination) || exists(newName)) return null;
+        Hologram n = new Hologram(newName, destination);
         copy(src, n);
-        holograms.put(newName.toLowerCase(), n);
+        holograms.put(key(newName), n);
         renderer.render(n);
         save();
         return n;
@@ -83,7 +84,7 @@ public final class HologramManager {
 
     public boolean move(String name, Location loc) {
         Hologram h = get(name);
-        if (h == null) return false;
+        if (h == null || !validLocation(loc)) return false;
         h.setLocation(loc);
         renderer.render(h);
         save();
@@ -91,7 +92,7 @@ public final class HologramManager {
     }
 
     private void copy(Hologram a, Hologram b) {
-        b.setLines(new ArrayList<>(a.lines()));
+        b.setLines(a.lines());
         b.setLineSpacing(a.lineSpacing());
         b.setViewRange(a.viewRange());
         b.setBillboard(a.billboard());
@@ -106,6 +107,7 @@ public final class HologramManager {
         b.setType(a.type());
         b.setContent(a.content());
         b.setBrightness(a.brightness());
+        b.setLineWidth(a.lineWidth());
         b.setTranslationX(a.translationX());
         b.setTranslationY(a.translationY());
         b.setTranslationZ(a.translationZ());
@@ -121,12 +123,29 @@ public final class HologramManager {
         // remove current
         for (Hologram h : new ArrayList<>(holograms.values())) renderer.remove(h);
         holograms.clear();
-        for (Hologram h : storage.load()) holograms.put(h.name().toLowerCase(), h);
+        for (Hologram h : storage.load()) holograms.put(key(h.name()), h);
         for (Hologram h : holograms.values()) renderer.render(h);
     }
 
     public void shutdown() {
         for (Hologram h : new ArrayList<>(holograms.values())) renderer.remove(h);
         save();
+    }
+
+    private static String key(String name) {
+        return name.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private static boolean validName(String name) {
+        return name != null && name.matches("[A-Za-z0-9_-]{1,32}");
+    }
+
+    private static boolean validLocation(Location location) {
+        return location != null && location.getWorld() != null
+                && Double.isFinite(location.getX())
+                && Double.isFinite(location.getY())
+                && Double.isFinite(location.getZ())
+                && Float.isFinite(location.getYaw())
+                && Float.isFinite(location.getPitch());
     }
 }
