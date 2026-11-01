@@ -1,6 +1,7 @@
 package dev.hauchdev.hholograms.storage;
 
 import dev.hauchdev.hholograms.model.Hologram;
+import dev.hauchdev.hholograms.model.HologramLine;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -11,10 +12,11 @@ import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public final class HologramStorage {
     private final Plugin plugin;
@@ -24,71 +26,87 @@ public final class HologramStorage {
         this.plugin = plugin;
         this.file = new File(plugin.getDataFolder(), "holograms.yml");
         if (!file.exists()) {
-            try { file.getParentFile().mkdirs(); file.createNewFile(); } catch (IOException ignored) {}
+            try {
+                Files.createDirectories(file.toPath().getParent());
+                file.createNewFile();
+            } catch (IOException e) {
+                plugin.getLogger().severe("Could not create hologram storage at " + file + ": " + e.getMessage());
+            }
         }
     }
 
     public List<Hologram> load() {
         List<Hologram> out = new ArrayList<>();
-        FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
+        FileConfiguration cfg = new YamlConfiguration();
+        try {
+            cfg.load(file);
+        } catch (IOException | org.bukkit.configuration.InvalidConfigurationException e) {
+            throw new IllegalStateException("Could not load hologram storage at " + file + ". The file was left untouched.", e);
+        }
         ConfigurationSection root = cfg.getConfigurationSection("holograms");
         if (root == null) return out;
         for (String name : root.getKeys(false)) {
             ConfigurationSection s = root.getConfigurationSection(name);
             if (s == null) continue;
-            String worldName = s.getString("world");
-            World world = Bukkit.getWorld(worldName);
-            if (world == null) {
-                plugin.getLogger().warning("[hHolograms] World '" + worldName + "' not found for hologram '" + name + "' - skipped.");
+            if (!name.matches("[A-Za-z0-9_-]{1,32}")) {
+                plugin.getLogger().warning("Invalid hologram name '" + name + "' in storage; skipped.");
                 continue;
             }
-            Location loc = new Location(world,
-                    s.getDouble("x"), s.getDouble("y"), s.getDouble("z"),
-                    (float) s.getDouble("yaw", 0), (float) s.getDouble("pitch", 0));
-            Hologram h = new Hologram(name, loc);
-            Object rawLines = s.get("lines");
-            if (rawLines instanceof java.util.List<?> list) {
-                for (Object o : list) {
-                    if (o instanceof String str) {
-                        h.lines().add(new dev.hauchdev.hholograms.model.HologramLine(str));
-                    } else if (o instanceof java.util.Map<?, ?> m) {
-                        Object to = m.get("text");
-                        String text = (to == null) ? "" : String.valueOf(to);
-                        dev.hauchdev.hholograms.model.HologramLine hl = new dev.hauchdev.hholograms.model.HologramLine(text);
-                        if (m.containsKey("scale")) hl.setScale(((Number) (Object) m.get("scale")).floatValue());
-                        if (m.containsKey("animation")) hl.setAnimation(String.valueOf(m.get("animation")));
-                        if (m.containsKey("animation-speed")) hl.setAnimationSpeed(((Number) (Object) m.get("animation-speed")).intValue());
-                        if (m.containsKey("paused")) hl.setPaused(Boolean.parseBoolean(String.valueOf((Object) m.get("paused"))));
-                        h.lines().add(hl);
+            try {
+                String worldName = s.getString("world", "");
+                World world = Bukkit.getWorld(worldName);
+                if (world == null) {
+                    plugin.getLogger().warning("World '" + worldName + "' not found for hologram '" + name + "'; skipped.");
+                    continue;
+                }
+                Location loc = new Location(world,
+                        s.getDouble("x"), s.getDouble("y"), s.getDouble("z"),
+                        (float) s.getDouble("yaw", 0), (float) s.getDouble("pitch", 0));
+                Hologram h = new Hologram(name, loc);
+                Object rawLines = s.get("lines");
+                if (rawLines instanceof List<?> list) {
+                    for (Object value : list) {
+                        if (value instanceof String text) {
+                            h.lines().add(new HologramLine(text));
+                        } else if (value instanceof java.util.Map<?, ?> lineData) {
+                            Object textValue = lineData.get("text");
+                            HologramLine line = new HologramLine(textValue == null ? "" : String.valueOf(textValue));
+                            if (lineData.get("scale") instanceof Number scale) line.setScale(scale.floatValue());
+                            if (lineData.containsKey("animation")) line.setAnimation(String.valueOf(lineData.get("animation")));
+                            if (lineData.get("animation-speed") instanceof Number speed) line.setAnimationSpeed(speed.intValue());
+                            if (lineData.containsKey("paused")) line.setPaused(Boolean.parseBoolean(String.valueOf(lineData.get("paused"))));
+                            h.lines().add(line);
+                        }
                     }
+                } else {
+                    for (String text : s.getStringList("lines")) h.lines().add(new HologramLine(text));
                 }
-            } else {
-                for (String str : s.getStringList("lines")) {
-                    h.lines().add(new dev.hauchdev.hholograms.model.HologramLine(str));
-                }
+                h.setLineSpacing(s.getDouble("line-spacing", 0.3));
+                h.setViewRange(s.getInt("view-range", 48));
+                h.setBillboard(s.getString("billboard", "CENTER"));
+                h.setSeeThrough(s.getBoolean("see-through", true));
+                h.setShadowed(s.getBoolean("shadowed", true));
+                h.setBackgroundColor(s.getString("background", "transparent"));
+                h.setAnimation(s.getString("animation", "none"));
+                h.setAnimationSpeed(s.getInt("animation-speed", 1));
+                h.setPaused(s.getBoolean("paused", false));
+                h.setScale((float) s.getDouble("scale", 1.0));
+                h.setAlignment(s.getString("alignment", "CENTER"));
+                h.setType(s.getString("type", "TEXT"));
+                h.setContent(s.getString("content", ""));
+                h.setBrightness(s.getInt("brightness", -1));
+                h.setLineWidth(s.getInt("line-width", 1000));
+                h.setTranslationX(s.getDouble("translation-x", 0));
+                h.setTranslationY(s.getDouble("translation-y", 0));
+                h.setTranslationZ(s.getDouble("translation-z", 0));
+                h.setRotationYaw((float) s.getDouble("rotation-yaw", 0));
+                h.setRotationPitch((float) s.getDouble("rotation-pitch", 0));
+                h.setVisibilityCondition(s.getString("visibility-condition", ""));
+                h.setOnClickCommand(s.getString("on-click", ""));
+                out.add(h);
+            } catch (RuntimeException e) {
+                plugin.getLogger().warning("Invalid data for hologram '" + name + "'; skipped: " + e.getMessage());
             }
-            h.setLineSpacing(s.getDouble("line-spacing", 0.3));
-            h.setViewRange(s.getInt("view-range", 48));
-            h.setBillboard(s.getString("billboard", "CENTER"));
-            h.setSeeThrough(s.getBoolean("see-through", true));
-            h.setShadowed(s.getBoolean("shadowed", true));
-            h.setBackgroundColor(s.getString("background", "transparent"));
-            h.setAnimation(s.getString("animation", "none"));
-            h.setAnimationSpeed(s.getInt("animation-speed", 1));
-            h.setPaused(s.getBoolean("paused", false));
-            h.setScale((float) s.getDouble("scale", 1.0));
-            h.setAlignment(s.getString("alignment", "CENTER"));
-            h.setType(s.getString("type", "TEXT"));
-            h.setContent(s.getString("content", ""));
-            h.setBrightness(s.getInt("brightness", -1));
-            h.setTranslationX(s.getDouble("translation-x", 0));
-            h.setTranslationY(s.getDouble("translation-y", 0));
-            h.setTranslationZ(s.getDouble("translation-z", 0));
-            h.setRotationYaw((float) s.getDouble("rotation-yaw", 0));
-            h.setRotationPitch((float) s.getDouble("rotation-pitch", 0));
-            h.setVisibilityCondition(s.getString("visibility-condition", ""));
-            h.setOnClickCommand(s.getString("on-click", ""));
-            out.add(h);
         }
         return out;
     }
@@ -129,6 +147,7 @@ public final class HologramStorage {
             cfg.set(base + ".type", h.type());
             cfg.set(base + ".content", h.content());
             cfg.set(base + ".brightness", h.brightness());
+            cfg.set(base + ".line-width", h.lineWidth());
             cfg.set(base + ".translation-x", h.translationX());
             cfg.set(base + ".translation-y", h.translationY());
             cfg.set(base + ".translation-z", h.translationZ());
@@ -137,8 +156,17 @@ public final class HologramStorage {
             cfg.set(base + ".visibility-condition", h.visibilityCondition());
             cfg.set(base + ".on-click", h.onClickCommand());
         }
-        try { cfg.save(file); } catch (IOException e) {
-            plugin.getLogger().warning("Failed to save holograms: " + e.getMessage());
+        File temporary = new File(file.getParentFile(), file.getName() + ".tmp");
+        try {
+            Files.createDirectories(file.toPath().getParent());
+            cfg.save(temporary);
+            try {
+                Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save holograms to " + file + ": " + e.getMessage());
         }
     }
 }
