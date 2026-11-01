@@ -2,7 +2,7 @@
 
 Premium hologram system for Paper servers (1.20+). Create, edit, animate, and manage in-world holograms built with Minecraft display entities.
 
-Prepared release: `0.3.0` (unreleased). See [CHANGELOG.md](CHANGELOG.md) for release notes.
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Highlights
 
